@@ -6,11 +6,12 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/liftedinit/mfx-migrator/internal/state"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/liftedinit/mfx-migrator/internal/utils"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // claimCmd represents the claim command
@@ -66,7 +67,7 @@ Trying to claim a work item that is already failed should return an error, unles
 			return err
 		}
 
-		if claimed == false {
+		if !claimed {
 			slog.Info("no work items available")
 		}
 
@@ -76,9 +77,15 @@ Trying to claim a work item that is already failed should return an error, unles
 
 func init() {
 	claimCmd.Flags().BoolP("force", "f", false, "Force re-claiming of a failed work item")
-	viper.BindPFlag("force", claimCmd.Flags().Lookup("force"))
+	err := viper.BindPFlag("force", claimCmd.Flags().Lookup("force"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
 	claimCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	viper.BindPFlag("uuid", claimCmd.Flags().Lookup("uuid"))
+	err = viper.BindPFlag("uuid", claimCmd.Flags().Lookup("uuid"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
 
 	rootCmd.AddCommand(claimCmd)
 }

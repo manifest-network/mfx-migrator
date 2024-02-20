@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/liftedinit/mfx-migrator/internal/state"
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/liftedinit/mfx-migrator/internal/state"
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 // verifyCmd represents the verify command
@@ -41,7 +42,10 @@ var verifyCmd = &cobra.Command{
 
 func init() {
 	verifyCmd.Flags().StringP("uuid", "u", "", "UUID of the MFX migration")
-	viper.BindPFlag("uuid", verifyCmd.Flags().Lookup("uuid"))
+	err := viper.BindPFlag("uuid", verifyCmd.Flags().Lookup("uuid"))
+	if err != nil {
+		slog.Error("unable to bind flag", "error", err)
+	}
 
 	rootCmd.AddCommand(verifyCmd)
 }

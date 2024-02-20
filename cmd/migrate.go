@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/liftedinit/mfx-migrator/internal/state"
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/liftedinit/mfx-migrator/internal/state"
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 // migrateCmd represents the migrate command
@@ -58,7 +59,10 @@ func migrate(url string, s *state.LocalState) {
 
 func init() {
 	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	viper.BindPFlag("uuid", migrateCmd.Flags().Lookup("uuid"))
+	err := viper.BindPFlag("uuid", migrateCmd.Flags().Lookup("uuid"))
+	if err != nil {
+		slog.Error("unable to bind flag", "error", err)
+	}
 
 	rootCmd.AddCommand(migrateCmd)
 }

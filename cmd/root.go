@@ -8,9 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 // Design notes:
@@ -78,9 +79,15 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().StringP("logLevel", "l", "info", fmt.Sprintf("set log level (%s)", validLogLevelsStr))
-	viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel"))
+	err := viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel"))
+	if err != nil {
+		slog.Error("unable to bind flag", "error", err)
+	}
 	rootCmd.PersistentFlags().StringP("url", "u", "", "URL of the ")
-	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
+	err = viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
+	if err != nil {
+		slog.Error("unable to bind flag", "error", err)
+	}
 
 	viper.AddConfigPath("./")
 	viper.SetConfigName("config")
