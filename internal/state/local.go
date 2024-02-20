@@ -23,7 +23,7 @@ const (
 
 // String returns the string representation of a LocalStatus.
 func (s LocalStatus) String() string {
-	return [...]string{"created", "claimed", "in progress"}[s-1]
+	return [...]string{"claiming", "claimed", "in progress"}[s-1]
 }
 
 // EnumIndex returns the enum index of a LocalStatus.
@@ -42,6 +42,10 @@ type LocalState struct {
 
 // NewState creates a new migration state.
 func NewState(uuid uuid.UUID, status LocalStatus, timestamp time.Time) *LocalState {
+	// Truncate the timestamp to avoid issues with JSON serialization.
+	slog.Debug("Truncating timestamp to the millisecond", "timestamp", timestamp)
+	timestamp = timestamp.Truncate(time.Millisecond)
+
 	slog.Debug("NewState", "uuid", uuid, "status", status, "timestamp", timestamp)
 	return &LocalState{
 		Version:   Version,
@@ -79,16 +83,17 @@ func LoadState(uuid string) (*LocalState, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Truncate the Timestamp to avoid issues with JSON serialization.
+	state.Timestamp = state.Timestamp.Truncate(time.Millisecond)
 	return &state, nil
 }
 
 // Update updates the state and saves it.
 // Modify this method according to what needs to be updated.
-func (s *LocalState) Update(status LocalStatus, timestamp time.Time) error {
+func (s *LocalState) Update(status LocalStatus, timestamp time.Time) {
 	slog.Debug("Update", "status", status, "timestamp", timestamp)
 	s.Status = status
-	s.Timestamp = timestamp
-	return s.Save()
+	s.Timestamp = timestamp.Truncate(time.Millisecond)
 }
 
 // Delete removes the .uuid file associated with the state.

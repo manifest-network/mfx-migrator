@@ -105,12 +105,15 @@ func claimWorkItem(url string) (bool, error) {
 		return false, err
 	}
 
+	// Loop through all work items from the remote DB and try to claim one
 	for _, workItem := range workItems.Items {
 		// If the work item is not in the correct state, skip it
 		if workItem.Status != state.CREATED {
-			slog.Warn("work item is not in the correct state", "uuid", workItem.UUID, "status", workItem.Status)
+			slog.Warn("work item is not in the correct state, skipping", "uuid", workItem.UUID, "status", workItem.Status)
+			continue
 		}
 
+		// Mark the local state as claiming and try to claim the work item on the remote DB
 		s := state.NewState(workItem.UUID, state.CLAIMING, time.Now())
 		if err := s.Save(); err != nil {
 			slog.Error("could not save state", "error", err)
@@ -122,7 +125,10 @@ func claimWorkItem(url string) (bool, error) {
 
 		if isClaimedRemotely {
 			// If the work item was claimed successfully on the DB, mark it as claimed in the local state
-			if err = s.Update(state.CLAIMED, time.Now()); err != nil {
+			s.Update(state.CLAIMED, time.Now())
+			if err = s.Save(); err != nil {
+				// The local and remote states are now out of sync
+				// This is a critical error and should be handled by an operator
 				slog.Error("could not update state", "error", err)
 				return false, err
 			}
@@ -131,11 +137,13 @@ func claimWorkItem(url string) (bool, error) {
 			return true, nil
 		}
 
+		// If the work item was not claimed successfully on the DB, delete the local state and try the next work item
 		if err = s.Delete(); err != nil {
 			slog.Error("could not delete state", "error", err)
 			return false, err
 		}
 	}
 
+	// No work items available
 	return false, nil
 }

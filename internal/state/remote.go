@@ -13,6 +13,15 @@ const (
 	FAILED
 )
 
+func (s RemoteStatus) String() string {
+	return [...]string{"created", "failed"}[s-1]
+}
+
+// EnumIndex returns the enum index of a LocalStatus.
+func (s RemoteStatus) EnumIndex() int {
+	return int(s)
+}
+
 type WorkItem struct {
 	Status           RemoteStatus `json:"status"`
 	UUID             uuid.UUID    `json:"uuid"`

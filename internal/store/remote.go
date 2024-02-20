@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -22,8 +23,8 @@ func GetAllWorkItems(requestURL string) (*state.WorkItems, error) {
 
 	contentType := res.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
-		slog.Error("http response content type error", "Content-Type", contentType)
-		return nil, err
+		slog.Error("unexpected content type", "Content-Type", contentType)
+		return nil, fmt.Errorf("unexpected content type: %s", contentType)
 	}
 
 	defer res.Body.Close()
