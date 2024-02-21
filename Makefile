@@ -52,6 +52,14 @@ govulncheck: ## Run govulncheck
 	$(MAKE) govulncheck-install
 	@govulncheck ./...
 
+#### VET ####
+
+vet: ## Run go vet
+	@echo "--> Running go vet"
+	@go vet ./...
+
+.PHONY: vet
+
 #### COVERAGE ####
 
 coverage: ## Run coverage report
