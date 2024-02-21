@@ -24,16 +24,17 @@ type LocalState struct {
 
 // NewState creates a new migration state.
 func NewState(itemUUID uuid.UUID, status Status, timestamp time.Time) *LocalState {
+	utc := timestamp.UTC()
 	// Truncate the timestamp to avoid issues with JSON serialization.
-	slog.Debug("Truncating timestamp to the millisecond", "timestamp", timestamp)
-	timestamp = timestamp.Truncate(time.Millisecond)
+	slog.Debug("Truncating timestamp to the millisecond", "timestamp", utc)
+	utc = utc.Truncate(time.Millisecond)
 
-	slog.Debug("NewState", "uuid", itemUUID, "status", status, "timestamp", timestamp)
+	slog.Debug("NewState", "uuid", itemUUID, "status", status, "timestamp", utc)
 	return &LocalState{
 		Version:   Version,
 		UUID:      itemUUID,
 		Status:    status,
-		Timestamp: timestamp,
+		Timestamp: utc,
 	}
 }
 
@@ -65,17 +66,16 @@ func LoadState(itemUUID uuid.UUID) (*LocalState, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Truncate the Timestamp to avoid issues with JSON serialization.
-	state.Timestamp = state.Timestamp.Truncate(time.Millisecond)
 	return &state, nil
 }
 
 // Update updates the state and saves it.
 // Modify this method according to what needs to be updated.
 func (s *LocalState) Update(status Status, timestamp time.Time) {
-	slog.Debug("Update", "status", status, "timestamp", timestamp)
+	utc := timestamp.UTC()
+	slog.Debug("Update", "status", status, "timestamp", utc)
 	s.Status = status
-	s.Timestamp = timestamp.Truncate(time.Millisecond)
+	s.Timestamp = utc.Truncate(time.Millisecond)
 }
 
 // Delete removes the .uuid file associated with the state.

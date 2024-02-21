@@ -26,7 +26,7 @@ func TestLocalState(t *testing.T) {
 	require.Equal(t, state.Version, s.Version)
 	require.Equal(t, someUUID, s.UUID)
 	require.Equal(t, state.CREATED, s.Status)
-	require.Equal(t, now.Truncate(time.Millisecond), s.Timestamp)
+	require.Equal(t, now.UTC().Truncate(time.Millisecond), s.Timestamp)
 }
 
 func TestLocalState_SaveDelete(t *testing.T) {
@@ -70,7 +70,7 @@ func TestLocalState_Update(t *testing.T) {
 
 	// Update the state.
 	newStatus := state.PROCESSING
-	newTimestamp := time.Now()
+	newTimestamp := time.Now().UTC()
 	s.Update(newStatus, newTimestamp)
 	err = s.Save()
 	require.NoError(t, err)
