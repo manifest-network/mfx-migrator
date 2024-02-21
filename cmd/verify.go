@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/liftedinit/mfx-migrator/internal/state"
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 // verifyCmd represents the verify command
@@ -18,13 +18,13 @@ var verifyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		url := viper.GetString("url")
 		uuidStr := viper.GetString("uuid")
-
-		if uuidStr != "" && !utils.IsValidUUID(uuidStr) {
-			slog.Error("invalid uuid", "uuid", uuidStr)
-			return fmt.Errorf("invalid uuid: %s", uuidStr)
+		if uuidStr == "" {
+			slog.Error("uuid is required")
+			return errors.New("uuid is required")
 		}
+		workItemUUID := uuid.MustParse(uuidStr)
 
-		s, err := state.LoadState(uuidStr)
+		s, err := state.LoadState(workItemUUID)
 		if err != nil {
 			slog.Warn("unable to load local state, continuing", "error", err)
 		}

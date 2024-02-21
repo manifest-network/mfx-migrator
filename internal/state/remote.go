@@ -6,28 +6,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type RemoteStatus int
-
-const (
-	CREATED RemoteStatus = iota + 1
-	FAILED
-)
-
-func (s RemoteStatus) String() string {
-	return [...]string{"created", "failed"}[s-1]
-}
-
-// EnumIndex returns the enum index of a LocalStatus.
-func (s RemoteStatus) EnumIndex() int {
-	return int(s)
-}
-
 type WorkItem struct {
-	Status           RemoteStatus `json:"status"`
-	UUID             uuid.UUID    `json:"uuid"`
-	ManyHash         string       `json:"manyHash"`
-	ManifestHash     *string      `json:"manifestHash"`
-	ManifestDatetime *time.Time   `json:"manifestDatetime"`
+	Status           Status     `json:"status"`
+	UUID             uuid.UUID  `json:"uuid"`
+	ManyHash         string     `json:"manyHash"`
+	ManifestHash     *string    `json:"manifestHash"`
+	ManifestDatetime *time.Time `json:"manifestDatetime"`
 }
 
 type Meta struct {

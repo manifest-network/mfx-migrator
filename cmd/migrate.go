@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/liftedinit/mfx-migrator/internal/state"
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 // migrateCmd represents the migrate command
@@ -19,14 +20,14 @@ var migrateCmd = &cobra.Command{
 		url := viper.GetString("url")
 		uuidStr := viper.GetString("uuid")
 
-		// Validate UUID
-		if uuidStr != "" && !utils.IsValidUUID(uuidStr) {
-			slog.Error("invalid uuid", "uuid", uuidStr)
-			return fmt.Errorf("invalid uuid: %s", uuidStr)
+		if uuidStr == "" {
+			slog.Error("uuid is required")
+			return errors.New("uuid is required")
 		}
+		workItemUUID := uuid.MustParse(uuidStr)
 
 		// Load the local state from the *.uuid file
-		s, err := state.LoadState(uuidStr)
+		s, err := state.LoadState(workItemUUID)
 		if err != nil {
 			slog.Error("unable to load state", "error", err)
 			return err

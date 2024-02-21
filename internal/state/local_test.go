@@ -1,35 +1,21 @@
 package state_test
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/liftedinit/mfx-migrator/internal/testutils"
+
 	"github.com/liftedinit/mfx-migrator/internal/state"
 )
-
-func setupTest(t *testing.T) (string, func()) {
-	// Create a temporary directory.
-	tempDir, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-
-	// Change the current working directory to the temporary directory so that the state files are written there
-	err = os.Chdir(tempDir)
-	require.NoError(t, err)
-
-	return tempDir, func() {
-		// Cleanup function to remove the temporary directory
-		os.RemoveAll(tempDir)
-	}
-}
 
 func newState() (*state.LocalState, uuid.UUID, time.Time) {
 	someUUID := uuid.New()
 	now := time.Now()
-	s := state.NewState(someUUID, state.CLAIMING, now)
+	s := state.NewState(someUUID, state.CREATED, now)
 	return s, someUUID, now
 }
 
@@ -39,12 +25,12 @@ func TestLocalState(t *testing.T) {
 	// Check that the state was created correctly.
 	require.Equal(t, state.Version, s.Version)
 	require.Equal(t, someUUID, s.UUID)
-	require.Equal(t, state.CLAIMING, s.Status)
+	require.Equal(t, state.CREATED, s.Status)
 	require.Equal(t, now.Truncate(time.Millisecond), s.Timestamp)
 }
 
 func TestLocalState_SaveDelete(t *testing.T) {
-	_, cleanup := setupTest(t)
+	_, cleanup := testutils.SetupTempDir(t)
 	defer cleanup()
 
 	s, someUUID, _ := newState()
@@ -61,7 +47,7 @@ func TestLocalState_SaveDelete(t *testing.T) {
 }
 
 func TestLocalState_SaveLoad(t *testing.T) {
-	_, cleanup := setupTest(t)
+	_, cleanup := testutils.SetupTempDir(t)
 	defer cleanup()
 
 	s, someUUID, _ := newState()
@@ -69,13 +55,13 @@ func TestLocalState_SaveLoad(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the state from the file.
-	loaded, err := state.LoadState(someUUID.String())
+	loaded, err := state.LoadState(someUUID)
 	require.NoError(t, err)
 	require.Equal(t, s, loaded)
 }
 
 func TestLocalState_Update(t *testing.T) {
-	_, cleanup := setupTest(t)
+	_, cleanup := testutils.SetupTempDir(t)
 	defer cleanup()
 
 	s, someUUID, _ := newState()
@@ -83,14 +69,14 @@ func TestLocalState_Update(t *testing.T) {
 	require.NoError(t, err)
 
 	// Update the state.
-	newStatus := state.CLAIMED
+	newStatus := state.PROCESSING
 	newTimestamp := time.Now()
 	s.Update(newStatus, newTimestamp)
 	err = s.Save()
 	require.NoError(t, err)
 
 	// Load the state from the file.
-	loaded, err := state.LoadState(someUUID.String())
+	loaded, err := state.LoadState(someUUID)
 	require.NoError(t, err)
 	require.Equal(t, newStatus, loaded.Status)
 	require.Equal(t, newTimestamp.Truncate(time.Millisecond), loaded.Timestamp)
@@ -98,14 +84,18 @@ func TestLocalState_Update(t *testing.T) {
 
 func TestLocalStatus(t *testing.T) {
 	s, _, _ := newState()
-	require.Equal(t, s.Status.String(), "claiming")
+	require.Equal(t, s.Status.String(), "created")
 	require.Equal(t, s.Status.EnumIndex(), 1)
 
 	s.Update(state.CLAIMED, time.Now())
 	require.Equal(t, s.Status.String(), "claimed")
 	require.Equal(t, s.Status.EnumIndex(), 2)
 
-	s.Update(state.IN_PROGRESS, time.Now())
-	require.Equal(t, s.Status.String(), "in progress")
+	s.Update(state.PROCESSING, time.Now())
+	require.Equal(t, s.Status.String(), "processing")
 	require.Equal(t, s.Status.EnumIndex(), 3)
+
+	s.Update(state.FAILED, time.Now())
+	require.Equal(t, s.Status.String(), "failed")
+	require.Equal(t, s.Status.EnumIndex(), 4)
 }
