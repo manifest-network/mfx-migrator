@@ -1,28 +1,18 @@
 package testutils
 
 import (
-	"embed"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
-// Function to create a mock server
-func createMockServer(handler http.HandlerFunc) *httptest.Server {
-	return httptest.NewServer(handler)
-}
+func CreateHTTPTestServer(routes map[string]http.HandlerFunc) *httptest.Server {
+	mux := http.NewServeMux()
 
-func CreateHTTPTestServer(t *testing.T, filePath string, contentType string, mockData embed.FS) *httptest.Server {
-	data, err := mockData.ReadFile(filePath)
-	require.NoError(t, err)
+	for route, handler := range routes {
+		mux.HandleFunc(route, handler)
+	}
 
-	server := createMockServer(func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Set("Content-Type", contentType)
-		_, err = rw.Write(data)
-		require.NoError(t, err)
-	})
+	server := httptest.NewServer(mux)
 
 	return server
 }

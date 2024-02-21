@@ -26,3 +26,7 @@ type WorkItems struct {
 	Items []WorkItem `json:"items"`
 	Meta  Meta       `json:"meta"`
 }
+
+type UpdateResponse struct {
+	Status bool `json:"status"`
+}

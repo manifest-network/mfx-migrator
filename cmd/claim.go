@@ -28,6 +28,8 @@ Trying to claim a work item that is already failed should return an error, unles
 		uuidStr := viper.GetString("uuid")
 		force := viper.GetBool("force")
 
+		store := store.NewRemoteStore(&store.RouterImpl{})
+
 		var claimed bool
 		var err error
 		if uuidStr != "" {
