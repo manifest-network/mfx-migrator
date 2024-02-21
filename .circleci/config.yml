@@ -1,0 +1,75 @@
+# mfx-migrator CI
+# The Lifted Initiative
+version: 2.1
+
+GO_VERSION: &go_version '1.22'
+GORELEASER_VERSION: &goreleaser_version 'v1.23.0'
+
+orbs:
+  go: circleci/go@1.10.0
+  codecov: codecov/codecov@3.3.0
+
+jobs:
+  build:
+    executor:
+      name: go/default
+      tag: *go_version
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+      - run: make coverage
+      - codecov/upload:
+          file: coverage-filtered.out
+      - go/install-goreleaser:
+          version: *goreleaser_version
+      - run: goreleaser release --snapshot --clean
+      - run:
+          name: move artifacts
+          command: |
+            mkdir -p /tmp/artifacts
+            mv dist/mfx-migrator_*.tar.gz dist/mfx-migrator_*.txt /tmp/artifacts
+      - store_artifacts:
+          path: /tmp/artifacts
+  security:
+    executor:
+      name: go/default
+      tag: *go_version
+    steps:
+      - checkout
+      - run: make vet
+      - run: make govulncheck
+  release:
+    executor:
+      name: go/default
+      tag: *go_version
+    resource_class: xlarge
+    steps:
+      - checkout
+      - go/install-goreleaser:
+          version: *goreleaser_version
+      # Something is wrong with the go/goreleaser orb, so we have to do this manually
+      - run:
+          name: Releasing to GitHub
+          command: |
+            goreleaser check
+            goreleaser release
+
+workflows:
+  main:
+    jobs:
+      - build
+      - security
+  release:
+    jobs:
+      - release:
+          context:
+            - GITHUB_CREDS
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - /^v?\d(\.\d){2}$/ # e.g. major, minor, patch (0.1.1)
+                - /^v?\d(\.\d){2}(-[\w-]+(\.[\w-]+)?)$/ # prereleases (0.1.1-alpha.8)
