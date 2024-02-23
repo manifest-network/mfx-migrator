@@ -77,8 +77,18 @@ func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, er
 }
 
 func (s *Store) tryToClaimWorkItem(item *WorkItem, force bool) (*WorkItem, error) {
+	// 0. Check if the work item is in the correct state to be claimed
+	if item.Status != CREATED {
+		// If the work item is not in the correct state, we can't claim it, unless we're forcing it
+		if !force {
+			slog.Error("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
+			return nil, fmt.Errorf("work item not in the correct state to be claimed: %s", item.Status)
+		}
+		slog.Warn("forcing re-claim of work item", "uuid", item.UUID, "status", item.Status)
+	}
+
 	// 1. Try to claim the work item
-	updateResponse, err := s.updateWorkItem(*item, CLAIMED, force)
+	updateResponse, err := s.UpdateWorkItem(*item, CLAIMED)
 	if err != nil {
 		slog.Warn("unable to claim the work item", "msg", err)
 		return nil, err
@@ -95,18 +105,8 @@ func (s *Store) tryToClaimWorkItem(item *WorkItem, force bool) (*WorkItem, error
 	return nil, nil
 }
 
-// updateWorkItem updates the status of a work item in the remote database.
-func (s *Store) updateWorkItem(item WorkItem, status WorkItemStatus, force bool) (*WorkItemUpdateResponse, error) {
-	// 0. Check if the work item is in the correct state to be claimed
-	if item.Status != CREATED {
-		// If the work item is not in the correct state, we can't claim it, unless we're forcing it
-		if !force {
-			slog.Error("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
-			return nil, fmt.Errorf("work item not in the correct state to be claimed: %s", item.Status)
-		}
-		slog.Warn("forcing re-claim of work item", "uuid", item.UUID, "status", item.Status)
-	}
-
+// UpdateWorkItem updates the status of a work item in the remote database.
+func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemUpdateResponse, error) {
 	// 1. Create an update request
 	updateRequest := WorkItemUpdateRequest{
 		Status:           status,

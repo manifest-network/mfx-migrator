@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"log/slog"
 	"net/url"
 
@@ -26,7 +27,6 @@ Trying to claim a work item that is already claimed should return an error.
 Trying to claim a work item that is already completed should return an error.
 Trying to claim a work item that is already failed should return an error, unless the '-f' flag is set.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// URL is validated in the PersistentPreRunE function
 		urlStr := viper.GetString("url")
 		uuidStr := viper.GetString("item-uuid")
 		force := viper.GetBool("force")
@@ -35,27 +35,36 @@ Trying to claim a work item that is already failed should return an error, unles
 
 		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "force", force, "username", username)
 
-		// Create a new store with the default HTTP client
+		if username == "" || password == "" {
+			slog.Error("username and password are required")
+			return errors.New("username and password are required")
+		}
+
+		// Parse the URL
 		url, err := url.Parse(urlStr)
 		if err != nil {
 			slog.Error("could not parse URL", "error", err)
 			return err
 		}
-		var s *store.Store
-		s = store.New(url)
-		if username != "" && password != "" {
-			token, err := s.Login(username, password)
-			if err != nil {
-				slog.Error("could not login", "error", err)
-				return err
-			}
-			if token == "" {
-				slog.Error("no token returned")
-				return err
-			}
-			s.SetClient(httpclient.NewWithClient(resty.New().SetAuthToken(token)))
+
+		// Create a new store with the default HTTP client
+		s := store.New(url)
+
+		// Login to the remote database
+		token, err := s.Login(username, password)
+		if err != nil {
+			slog.Error("could not login", "error", err)
+			return err
+		}
+		if token == "" {
+			slog.Error("no token returned")
+			return err
 		}
 
+		// Create a new authenticated HTTP client and set it on the store
+		s.SetClient(httpclient.NewWithClient(resty.New().SetAuthToken(token)))
+
+		// Try claiming a work item
 		var item *store.WorkItem
 		if uuidStr != "" {
 			item, err = s.ClaimWorkItemFromUUID(uuid.MustParse(uuidStr), force)
@@ -63,6 +72,7 @@ Trying to claim a work item that is already failed should return an error, unles
 			item, err = s.ClaimWorkItemFromQueue()
 		}
 
+		// An error occurred during the claim
 		if err != nil {
 			slog.Error("could not claim work item", "error", err)
 			return err
@@ -77,6 +87,7 @@ Trying to claim a work item that is already failed should return an error, unles
 			}
 		}
 
+		// At this point, no work items are available
 		return nil
 	},
 }

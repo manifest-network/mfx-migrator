@@ -15,8 +15,9 @@ func TestStore_WorkItemStatus(t *testing.T) {
 	}{
 		{"created", store.CREATED, 1},
 		{"claimed", store.CLAIMED, 2},
-		{"processing", store.PROCESSING, 3},
-		{"failed", store.FAILED, 4},
+		{"migrating", store.MIGRATING, 3},
+		{"completed", store.COMPLETED, 4},
+		{"failed", store.FAILED, 5},
 	}
 
 	for _, tt := range tests {

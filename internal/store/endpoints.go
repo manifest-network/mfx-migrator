@@ -7,6 +7,7 @@ import (
 )
 
 // TODO: Move `neighborhoods/2/` to a config file
+// TODO: Refactor
 const (
 	MigrationsEndpoint = "neighborhoods/2/migrations"
 	MigrationEndpoint  = "neighborhoods/2/migrations/{uuid}"

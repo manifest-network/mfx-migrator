@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 
+	"github.com/go-resty/resty/v2"
+	"github.com/liftedinit/mfx-migrator/internal/httpclient"
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
@@ -16,8 +19,24 @@ var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Execute the MFX token migration associated with the given UUID.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		url := viper.GetString("url")
-		uuidStr := viper.GetString("uuid")
+		urlStr := viper.GetString("url")
+		uuidStr := viper.GetString("item-uuid")
+		username := viper.GetString("username")
+		password := viper.GetString("password")
+
+		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "username", username)
+
+		if username == "" || password == "" {
+			slog.Error("username and password are required")
+			return errors.New("username and password are required")
+		}
+
+		// Parse the URL
+		url, err := url.Parse(urlStr)
+		if err != nil {
+			slog.Error("could not parse URL", "error", err)
+			return err
+		}
 
 		if uuidStr == "" {
 			slog.Error("uuid is required")
@@ -38,27 +57,69 @@ var migrateCmd = &cobra.Command{
 		}
 
 		// Execute the migration
-		migrate(url, item)
+		slog.Info("migrating", "uuid", item.UUID)
+
+		slog.Debug("setting migration status to 'migrating'")
+
+		// Create a new store with the default HTTP client
+		s := store.New(url)
+
+		// Login to the remote database
+		token, err := s.Login(username, password)
+		if err != nil {
+			slog.Error("could not login", "error", err)
+			return err
+		}
+		if token == "" {
+			slog.Error("no token returned")
+			return err
+		}
+
+		// Create a new authenticated HTTP client and set it on the store
+		s.SetClient(httpclient.NewWithClient(resty.New().SetAuthToken(token)))
+
+		// Set the work item status to 'migrating'
+		response, err := s.UpdateWorkItem(*item, store.MIGRATING)
+		if err != nil {
+			slog.Error("could not update work item", "error", err)
+			return err
+		}
+
+		// An error occurred setting the work item status to 'migrating'
+		if response.Status != store.MIGRATING {
+			slog.Error("work item not migrating", "uuid", item.UUID)
+			return fmt.Errorf("work item not migrating: %s", item.UUID)
+		}
+
+		// 3. Execute the migration
+		// 4. Verify the migration was successful
+		// 5. POST the 'talib/complete-work/' endpoint to complete the work item
+		//   5.1. If the work item is completed, the `*.uuid` file should be removed
+		//        Note: Completed involves both successful and failed migrations.
+		//              Failed migrations should have a reason for failure persisted to the database.
 
 		return nil
 	},
 }
 
-func migrate(url string, item *store.WorkItem) {
-	slog.Debug("migrating", "url", url, "item", item)
-	// 3. Execute the migration
-	// 4. Verify the migration was successful
-	// 5. POST the 'talib/complete-work/' endpoint to complete the work item
-	//   5.1. If the work item is completed, the `*.uuid` file should be removed
-	//        Note: Completed involves both successful and failed migrations.
-	//              Failed migrations should have a reason for failure persisted to the database.
-}
-
 func init() {
-	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	err := viper.BindPFlag("uuid", migrateCmd.Flags().Lookup("uuid"))
+	// WARN: Naming this parameter `uuid` seems to cause a conflict with the `uuid` package
+	migrateCmd.Flags().String("item-uuid", "", "UUID of the work item to claim")
+	err := viper.BindPFlag("item-uuid", migrateCmd.Flags().Lookup("item-uuid"))
 	if err != nil {
 		slog.Error("unable to bind flag", "error", err)
+	}
+
+	migrateCmd.Flags().String("username", "", "Username for the remote database")
+	err = viper.BindPFlag("username", migrateCmd.Flags().Lookup("username"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
+
+	migrateCmd.Flags().String("password", "", "Password for the remote database")
+	err = viper.BindPFlag("password", migrateCmd.Flags().Lookup("password"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
 	}
 
 	rootCmd.AddCommand(migrateCmd)
