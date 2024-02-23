@@ -15,7 +15,7 @@ var verifyCmd = &cobra.Command{
 	Short: "Verify the status of a migration of MFX tokens to the Manifest Ledger",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		urlStr := viper.GetString("url")
-		uuidStr := viper.GetString("item-uuid")
+		uuidStr := viper.GetString("verify-uuid")
 		if uuidStr == "" {
 			slog.Error("uuid is required")
 			return errors.New("uuid is required")
@@ -38,9 +38,8 @@ var verifyCmd = &cobra.Command{
 }
 
 func init() {
-	// WARN: Naming this parameter `uuid` seems to cause a conflict with the `uuid` package
-	verifyCmd.Flags().StringP("item-uuid", "u", "", "UUID of the MFX migration")
-	err := viper.BindPFlag("item-uuid", verifyCmd.Flags().Lookup("item-uuid"))
+	verifyCmd.Flags().String("uuid", "", "UUID of the work item to verify")
+	err := viper.BindPFlag("verify-uuid", verifyCmd.Flags().Lookup("uuid"))
 	if err != nil {
 		slog.Error("unable to bind flag", "error", err)
 	}

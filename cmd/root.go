@@ -90,6 +90,18 @@ func init() {
 		slog.Error("unable to bind flag", "error", err)
 	}
 
+	rootCmd.Flags().String("username", "", "Username for the remote database")
+	err = viper.BindPFlag("username", rootCmd.Flags().Lookup("username"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
+
+	rootCmd.Flags().String("password", "", "Password for the remote database")
+	err = viper.BindPFlag("password", rootCmd.Flags().Lookup("password"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
+
 	viper.AddConfigPath("./")
 	viper.SetConfigName("config")
 

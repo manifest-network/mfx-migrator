@@ -20,7 +20,7 @@ var migrateCmd = &cobra.Command{
 	Short: "Execute the MFX token migration associated with the given UUID.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		urlStr := viper.GetString("url")
-		uuidStr := viper.GetString("item-uuid")
+		uuidStr := viper.GetString("migrate-uuid")
 		username := viper.GetString("username")
 		password := viper.GetString("password")
 
@@ -91,6 +91,13 @@ var migrateCmd = &cobra.Command{
 			return fmt.Errorf("work item not migrating: %s", item.UUID)
 		}
 
+		item.Status = store.MIGRATING
+		err = localstate.SaveState(item)
+		if err != nil {
+			slog.Error("could not save state", "error", err)
+			return err
+		}
+
 		// 3. Execute the migration
 		// 4. Verify the migration was successful
 		// 5. POST the 'talib/complete-work/' endpoint to complete the work item
@@ -103,23 +110,10 @@ var migrateCmd = &cobra.Command{
 }
 
 func init() {
-	// WARN: Naming this parameter `uuid` seems to cause a conflict with the `uuid` package
-	migrateCmd.Flags().String("item-uuid", "", "UUID of the work item to claim")
-	err := viper.BindPFlag("item-uuid", migrateCmd.Flags().Lookup("item-uuid"))
+	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
+	err := viper.BindPFlag("migrate-uuid", migrateCmd.Flags().Lookup("uuid"))
 	if err != nil {
 		slog.Error("unable to bind flag", "error", err)
-	}
-
-	migrateCmd.Flags().String("username", "", "Username for the remote database")
-	err = viper.BindPFlag("username", migrateCmd.Flags().Lookup("username"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
-	}
-
-	migrateCmd.Flags().String("password", "", "Password for the remote database")
-	err = viper.BindPFlag("password", migrateCmd.Flags().Lookup("password"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
 	}
 
 	rootCmd.AddCommand(migrateCmd)

@@ -103,7 +103,7 @@ func TestStore_Claim(t *testing.T) {
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
 		}, func() {
 			item, err := s.ClaimWorkItemFromQueue()
-			require.Error(t, err) // a work item not in the correct state to be claimed
+			require.NoError(t, err)
 			require.Nil(t, item)
 		}},
 		{"success_uuid", []Endpoint{

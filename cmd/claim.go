@@ -28,7 +28,7 @@ Trying to claim a work item that is already completed should return an error.
 Trying to claim a work item that is already failed should return an error, unless the '-f' flag is set.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		urlStr := viper.GetString("url")
-		uuidStr := viper.GetString("item-uuid")
+		uuidStr := viper.GetString("claim-uuid")
 		force := viper.GetBool("force")
 		username := viper.GetString("username")
 		password := viper.GetString("password")
@@ -99,21 +99,8 @@ func init() {
 		slog.Error("could not bind flag", "error", err)
 	}
 
-	// WARN: Naming this parameter `uuid` seems to cause a conflict with the `uuid` package
-	claimCmd.Flags().String("item-uuid", "", "UUID of the work item to claim")
-	err = viper.BindPFlag("item-uuid", claimCmd.Flags().Lookup("item-uuid"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
-	}
-
-	claimCmd.Flags().String("username", "", "Username for the remote database")
-	err = viper.BindPFlag("username", claimCmd.Flags().Lookup("username"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
-	}
-
-	claimCmd.Flags().String("password", "", "Password for the remote database")
-	err = viper.BindPFlag("password", claimCmd.Flags().Lookup("password"))
+	claimCmd.Flags().String("uuid", "", "UUID of the work item to claim")
+	err = viper.BindPFlag("claim-uuid", claimCmd.Flags().Lookup("uuid"))
 	if err != nil {
 		slog.Error("could not bind flag", "error", err)
 	}

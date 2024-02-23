@@ -29,15 +29,24 @@ func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 
 	// 2. Loop over all work items
 	for _, item := range items.Items {
+		// 2.0 Check if the work item is in the correct state to be claimed
+		if item.Status != CREATED {
+			slog.Debug("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
+			continue
+		}
+
 		// 2.1 Try to claim the work item
-		claimedItem, err := s.tryToClaimWorkItem(&item, false)
+		claimedItem, err := s.tryToClaimWorkItem(&item)
 		if err != nil {
 			slog.Error(ErrorClaimingWorkItem, "error", err)
 			return nil, err
 		}
-		if err != nil || claimedItem == nil {
+
+		// 2.2 Unable to claim the work item, continue to the next one
+		if claimedItem == nil {
 			continue
 		}
+
 		return claimedItem, nil
 	}
 
@@ -63,8 +72,18 @@ func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, er
 	item := response.Result().(*WorkItem)
 	slog.Debug("work item", "item", item)
 
-	// 2. Try to claim the work item
-	claimedItem, err := s.tryToClaimWorkItem(item, force)
+	// 2. Check if the work item is in the correct state to be claimed
+	if item.Status != CREATED {
+		// If the work item is not in the correct state, we can't claim it, unless we're forcing it
+		if !force {
+			slog.Error("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
+			return nil, fmt.Errorf("work item not in the correct state to be claimed: %s", item.UUID)
+		}
+		slog.Warn("forcing re-claim of work item", "uuid", item.UUID, "status", item.Status)
+	}
+
+	// 3. Try to claim the work item
+	claimedItem, err := s.tryToClaimWorkItem(item)
 	if err != nil {
 		slog.Error(ErrorClaimingWorkItem, "error", err)
 		return nil, err
@@ -76,17 +95,7 @@ func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, er
 	return nil, fmt.Errorf("unable to claim the work item: %s", uuid)
 }
 
-func (s *Store) tryToClaimWorkItem(item *WorkItem, force bool) (*WorkItem, error) {
-	// 0. Check if the work item is in the correct state to be claimed
-	if item.Status != CREATED {
-		// If the work item is not in the correct state, we can't claim it, unless we're forcing it
-		if !force {
-			slog.Error("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
-			return nil, fmt.Errorf("work item not in the correct state to be claimed: %s", item.Status)
-		}
-		slog.Warn("forcing re-claim of work item", "uuid", item.UUID, "status", item.Status)
-	}
-
+func (s *Store) tryToClaimWorkItem(item *WorkItem) (*WorkItem, error) {
 	// 1. Try to claim the work item
 	updateResponse, err := s.UpdateWorkItem(*item, CLAIMED)
 	if err != nil {
