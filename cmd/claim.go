@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"log/slog"
+	"net/url"
 
 	"github.com/google/uuid"
+	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
 // claimCmd represents the claim command
@@ -24,31 +24,26 @@ Trying to claim a work item that is already completed should return an error.
 Trying to claim a work item that is already failed should return an error, unless the '-f' flag is set.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// URL is validated in the PersistentPreRunE function
-		url := viper.GetString("url")
+		urlStr := viper.GetString("url")
 		uuidStr := viper.GetString("uuid")
 		force := viper.GetBool("force")
 
-		store := store.NewRemoteStore(&store.RouterImpl{})
-
-		var claimed bool
-		var err error
+		// Create a new store with the default HTTP client
+		url, err := url.Parse(urlStr)
+		if err != nil {
+			slog.Error("could not parse URL", "error", err)
+			return err
+		}
+		store := store.New(url)
 		if uuidStr != "" {
-			// The user has specified a UUID to claim.
-			workItemUUID := uuid.MustParse(uuidStr)
-			claimed, err = store.ClaimWorkItemFromUUID(url, workItemUUID, force)
+			_, err = store.ClaimWorkItemFromUUID(uuid.MustParse(uuidStr), force)
 		} else {
-			// The user has not specified a UUID to claim.
-			// Claim the first available work item.
-			claimed, err = store.ClaimWorkItemFromQueue(url)
+			_, err = store.ClaimWorkItemFromQueue()
 		}
 
 		if err != nil {
 			slog.Error("could not claim work item", "error", err)
 			return err
-		}
-
-		if !claimed {
-			slog.Info("no work items available")
 		}
 
 		return nil
