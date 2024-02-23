@@ -21,16 +21,27 @@ func NewWithClient(client *resty.Client) *HttpClient {
 
 func (c *HttpClient) Get(url string, res interface{}) (*resty.Response, error) {
 	slog.Debug("GET", "url", url)
+	req := c.Client.R()
 	if res != nil {
-		return c.Client.R().SetResult(res).Get(url)
+		req = req.SetResult(res)
 	}
-	return c.Client.R().Get(url)
+	return req.Get(url)
 }
 
 func (c *HttpClient) Put(url string, body interface{}, res interface{}) (*resty.Response, error) {
 	slog.Debug("PUT", "url", url, "body", body)
+	req := c.Client.R().SetBody(body)
 	if res != nil {
-		return c.Client.R().SetBody(body).SetResult(res).Put(url)
+		req = req.SetResult(res)
 	}
-	return c.Client.R().SetBody(body).Put(url)
+	return req.Put(url)
+}
+
+func (c *HttpClient) Post(url string, body interface{}, res interface{}) (*resty.Response, error) {
+	slog.Debug("POST", "url", url, "body", "[REDACTED]")
+	req := c.Client.R().SetBody(body)
+	if res != nil {
+		req = req.SetResult(res)
+	}
+	return req.Post(url)
 }

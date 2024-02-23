@@ -6,14 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// TODO: Move `neighborhoods/2/` to a config file
 const (
-	MigrationsEndpoint = "/migrations"
-	MigrationEndpoint  = "/migrations/{uuid}"
-	UpdateEndpoint     = "/migrations/{uuid}"
+	MigrationsEndpoint = "neighborhoods/2/migrations"
+	MigrationEndpoint  = "neighborhoods/2/migrations/{uuid}"
+	UpdateEndpoint     = "neighborhoods/2/migrations/{uuid}"
+	AuthEndpoint       = "auth/login"
 )
 
 func GetMigrationsEndpoint() string {
 	return MigrationsEndpoint
+}
+
+func GetAuthEndpoint() string {
+	return AuthEndpoint
 }
 
 func GetMigrationEndpoint(uuid string) string {

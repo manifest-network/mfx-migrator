@@ -87,6 +87,7 @@ func (s *Store) tryToClaimWorkItem(item *WorkItem, force bool) (*WorkItem, error
 	// 2. Check if the work item was claimed
 	if updateResponse.Status == CLAIMED {
 		slog.Debug("work item claimed", "uuid", item.UUID)
+		item.Status = CLAIMED
 		return item, nil
 	}
 
@@ -106,10 +107,12 @@ func (s *Store) updateWorkItem(item WorkItem, status WorkItemStatus, force bool)
 		slog.Warn("forcing re-claim of work item", "uuid", item.UUID, "status", item.Status)
 	}
 
-	// 1. Update the work item status
-	//    We're updating a copy of the work item, so we don't modify the original
-	//    TODO: Does this need to be a copy?
-	item.Status = status
+	// 1. Create an update request
+	updateRequest := WorkItemUpdateRequest{
+		Status:           status,
+		ManifestDatetime: item.ManifestDatetime,
+		ManifestHash:     item.ManifestHash,
+	}
 
 	// 2. Send the update request
 	// 2.1 Create the URL
@@ -120,11 +123,19 @@ func (s *Store) updateWorkItem(item WorkItem, status WorkItemStatus, force bool)
 	}
 
 	// 2.2 Send the request
-	response, err := s.client.Put(fullUrl, item, &WorkItemUpdateResponse{})
+	response, err := s.client.Put(fullUrl, updateRequest, &WorkItemUpdateResponse{})
 	if err != nil {
 		slog.Error("error claiming work item", "error", err)
 		return nil, err
 	}
+
+	slog.Debug("update response",
+		"status_code", response.StatusCode(),
+		"status", response.Status(),
+		"proto", response.Proto(),
+		"time", response.Time(),
+		"received_at", response.ReceivedAt(),
+		"body", response.String())
 
 	// 3. Return the response
 	updateResponse := response.Result().(*WorkItemUpdateResponse)

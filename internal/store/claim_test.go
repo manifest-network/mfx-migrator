@@ -20,9 +20,9 @@ import (
 
 const (
 	uuidv4Regex   = "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}"
-	rootUrl       = "http://fakeurl:3001"
-	migrationsUrl = rootUrl + "/migrations"
-	migrationUrl  = rootUrl + "/migrations/" + uuidv4Regex
+	rootUrl       = "http://fakeurl:3001/api/v1/"
+	migrationsUrl = rootUrl + "neighborhoods/2/migrations"                // TODO: Remove `neighborhoods/2/`
+	migrationUrl  = rootUrl + "neighborhoods/2/migrations/" + uuidv4Regex // TODO: Remove `neighborhoods/2/`
 )
 
 //go:embed testdata/work-items.json
@@ -93,6 +93,7 @@ func TestStore_Claim(t *testing.T) {
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-success.json", http.StatusOK},
 		}, func() {
 			item, err := s.ClaimWorkItemFromQueue()
+			require.NotEqual(t, uuid.Nil, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},
@@ -109,7 +110,9 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-success.json", http.StatusOK},
 		}, func() {
-			item, err := s.ClaimWorkItemFromUUID(uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
+			myUUID := uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f")
+			item, err := s.ClaimWorkItemFromUUID(myUUID, false)
+			require.Equal(t, myUUID, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},
@@ -133,7 +136,9 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item-force.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-force.json", http.StatusOK},
 		}, func() {
-			item, err := s.ClaimWorkItemFromUUID(uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), true)
+			myUUID := uuid.MustParse("c726e305-089a-4a50-b6b6-c707d45221f2")
+			item, err := s.ClaimWorkItemFromUUID(myUUID, true)
+			require.Equal(t, myUUID, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},
@@ -172,55 +177,3 @@ func TestStore_Claim(t *testing.T) {
 		httpmock.Reset()
 	}
 }
-
-//func TestClaimWorkItemFromQueue(t *testing.T) {
-//	_, cleanup := testutils.SetupTempDir(t)
-//	defer cleanup()
-//
-//	server := setup(t)
-//	defer server.Close()
-//
-//	remoteStore := store.NewRemoteStore(&store.RealRouter{}, &store.RealHttpClient{})
-//	claimed, err := remoteStore.ClaimWorkItemFromQueue(server.URL)
-//	require.NoError(t, err)
-//	require.True(t, claimed)
-//}
-//
-//func TestClaimWorkItemFromUUID(t *testing.T) {
-//	_, cleanup := testutils.SetupTempDir(t)
-//	defer cleanup()
-//
-//	server := setup(t)
-//	defer server.Close()
-//
-//	remoteStore := store.NewRemoteStore(&store.RealRouter{}, &store.RealHttpClient{})
-//	claimed, err := remoteStore.ClaimWorkItemFromUUID(server.URL, itemUUID, false)
-//	require.NoError(t, err)
-//	require.True(t, claimed)
-//}
-//
-//func TestClaimWorkItemFromUUID_UUIDNotFound(t *testing.T) {
-//	_, cleanup := testutils.SetupTempDir(t)
-//	defer cleanup()
-//
-//	server := setup(t)
-//	defer server.Close()
-//
-//	remoteStore := store.NewRemoteStore(&store.RealRouter{}, &store.RealHttpClient{})
-//	claimed, err := remoteStore.ClaimWorkItemFromUUID(server.URL, uuid.Nil, false)
-//	require.Error(t, err)
-//	require.False(t, claimed)
-//}
-//
-//func TestClaimWorkItem_UpdateFailure(t *testing.T) {
-//	_, cleanup := testutils.SetupTempDir(t)
-//	defer cleanup()
-//
-//	server := setup(t)
-//	defer server.Close()
-//
-//	remoteStore := store.NewRemoteStore(&MockRouterImpl{})
-//	claimed, err := remoteStore.ClaimWorkItemFromUUID(server.URL, itemUUID, false)
-//	require.NoError(t, err)
-//	require.False(t, claimed)
-//}

@@ -4,7 +4,9 @@ import (
 	"log/slog"
 	"net/url"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
+	"github.com/liftedinit/mfx-migrator/internal/httpclient"
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
@@ -26,8 +28,12 @@ Trying to claim a work item that is already failed should return an error, unles
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// URL is validated in the PersistentPreRunE function
 		urlStr := viper.GetString("url")
-		uuidStr := viper.GetString("uuid")
+		uuidStr := viper.GetString("item-uuid")
 		force := viper.GetBool("force")
+		username := viper.GetString("username")
+		password := viper.GetString("password")
+
+		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "force", force, "username", username)
 
 		// Create a new store with the default HTTP client
 		url, err := url.Parse(urlStr)
@@ -35,7 +41,21 @@ Trying to claim a work item that is already failed should return an error, unles
 			slog.Error("could not parse URL", "error", err)
 			return err
 		}
-		s := store.New(url)
+		var s *store.Store
+		s = store.New(url)
+		if username != "" && password != "" {
+			token, err := s.Login(username, password)
+			if err != nil {
+				slog.Error("could not login", "error", err)
+				return err
+			}
+			if token == "" {
+				slog.Error("no token returned")
+				return err
+			}
+			s.SetClient(httpclient.NewWithClient(resty.New().SetAuthToken(token)))
+		}
+
 		var item *store.WorkItem
 		if uuidStr != "" {
 			item, err = s.ClaimWorkItemFromUUID(uuid.MustParse(uuidStr), force)
@@ -67,8 +87,22 @@ func init() {
 	if err != nil {
 		slog.Error("could not bind flag", "error", err)
 	}
-	claimCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	err = viper.BindPFlag("uuid", claimCmd.Flags().Lookup("uuid"))
+
+	// WARN: Naming this parameter `uuid` seems to cause a conflict with the `uuid` package
+	claimCmd.Flags().String("item-uuid", "", "UUID of the work item to claim")
+	err = viper.BindPFlag("item-uuid", claimCmd.Flags().Lookup("item-uuid"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
+
+	claimCmd.Flags().String("username", "", "Username for the remote database")
+	err = viper.BindPFlag("username", claimCmd.Flags().Lookup("username"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
+
+	claimCmd.Flags().String("password", "", "Password for the remote database")
+	err = viper.BindPFlag("password", claimCmd.Flags().Lookup("password"))
 	if err != nil {
 		slog.Error("could not bind flag", "error", err)
 	}

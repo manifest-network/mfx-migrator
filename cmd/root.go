@@ -83,7 +83,8 @@ func init() {
 	if err != nil {
 		slog.Error("unable to bind flag", "error", err)
 	}
-	rootCmd.PersistentFlags().StringP("url", "u", "", "URL of the ")
+
+	rootCmd.PersistentFlags().StringP("url", "u", "", "Root URL of the API server")
 	err = viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
 	if err != nil {
 		slog.Error("unable to bind flag", "error", err)
