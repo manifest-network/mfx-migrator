@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/google/uuid"
+	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -34,16 +35,26 @@ Trying to claim a work item that is already failed should return an error, unles
 			slog.Error("could not parse URL", "error", err)
 			return err
 		}
-		store := store.New(url)
+		s := store.New(url)
+		var item *store.WorkItem
 		if uuidStr != "" {
-			_, err = store.ClaimWorkItemFromUUID(uuid.MustParse(uuidStr), force)
+			item, err = s.ClaimWorkItemFromUUID(uuid.MustParse(uuidStr), force)
 		} else {
-			_, err = store.ClaimWorkItemFromQueue()
+			item, err = s.ClaimWorkItemFromQueue()
 		}
 
 		if err != nil {
 			slog.Error("could not claim work item", "error", err)
 			return err
+		}
+
+		// If we have a work item, save it to the local state
+		if item != nil {
+			err = localstate.SaveState(item)
+			if err != nil {
+				slog.Error("could not save state", "error", err)
+				return err
+			}
 		}
 
 		return nil
