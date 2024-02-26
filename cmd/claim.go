@@ -52,18 +52,21 @@ Trying to claim a work item that is already failed should return an error, unles
 		s := store.NewWithClient(r)
 
 		// Login to the remote database
-		token, err := s.Login(username, password)
+		slog.Debug("logging in", "username", username, "password", "[REDACTED]")
+		response, err := r.R().SetBody(map[string]interface{}{"username": username, "password": password}).SetResult(&store.Token{}).Post("/auth/login")
 		if err != nil {
 			slog.Error("could not login", "error", err)
 			return err
 		}
-		if token == "" {
+
+		token := response.Result().(*store.Token)
+		if token.AccessToken == "" {
 			slog.Error("no token returned")
 			return err
 		}
 
-		// Create a new authenticated HTTP client and set it on the store
-		r.SetAuthToken(token)
+		// Set the auth token
+		r.SetAuthToken(token.AccessToken)
 
 		// Try claiming a work item
 		var item *store.WorkItem
