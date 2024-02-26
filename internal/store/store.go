@@ -2,40 +2,26 @@ package store
 
 import (
 	"log/slog"
-	"net/url"
 
-	"github.com/liftedinit/mfx-migrator/internal/httpclient"
+	"github.com/go-resty/resty/v2"
 )
 
 type Store struct {
-	client  *httpclient.HttpClient
-	rootUrl *url.URL
+	client *resty.Client
 }
 
-func New(url *url.URL) *Store {
-	return &Store{client: httpclient.New(), rootUrl: url}
-}
-
-func NewWithClient(url *url.URL, client *httpclient.HttpClient) *Store {
-	return &Store{client: client, rootUrl: url}
-}
-
-func (s *Store) SetClient(client *httpclient.HttpClient) {
-	s.client = client
+func NewWithClient(client *resty.Client) *Store {
+	return &Store{client: client}
 }
 
 func (s *Store) Login(username, password string) (string, error) {
 	slog.Debug("logging in", "username", username, "password", "[REDACTED]")
 
-	fullUrl, err := url.JoinPath(s.rootUrl.String(), GetAuthEndpoint())
-	if err != nil {
-		return "", err
-	}
-
-	response, err := s.client.Post(fullUrl, &Credentials{
+	req := s.client.R().SetBody(&Credentials{
 		Username: username,
 		Password: password,
-	}, &Token{})
+	}).SetResult(&Token{})
+	response, err := req.Post("/auth/login")
 	if err != nil {
 		return "", err
 	}

@@ -3,22 +3,15 @@ package store
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
 
 	"github.com/google/uuid"
 )
 
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
 func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
-	// 0. Create the URL
-	fullUrl, err := url.JoinPath(s.rootUrl.String(), GetMigrationsEndpoint())
-	if err != nil {
-		slog.Error(ErrorGeneratingURL, "error", err)
-		return nil, err
-	}
-
 	// 1. Get all work items from remote
-	response, err := s.client.Get(fullUrl, &WorkItems{})
+	req := s.client.R().SetResult(&WorkItems{})
+	response, err := req.Get("neighborhoods/{neighborhood}/migrations/")
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
 		return nil, err
@@ -55,15 +48,9 @@ func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 }
 
 func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, error) {
-	// 0. Create the URL
-	fullUrl, err := url.JoinPath(s.rootUrl.String(), GetMigrationEndpoint(uuid.String()))
-	if err != nil {
-		slog.Error(ErrorGeneratingURL, "error", err)
-		return nil, err
-	}
-
 	// 1. Get the work item from the remote database
-	response, err := s.client.Get(fullUrl, &WorkItem{})
+	req := s.client.R().SetPathParam("uuid", uuid.String()).SetResult(&WorkItem{})
+	response, err := req.Get("neighborhoods/{neighborhood}/migrations/{uuid}")
 	if err != nil {
 		slog.Error(ErrorGettingWorkItem, "error", err)
 		return nil, err
@@ -124,15 +111,9 @@ func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemU
 	}
 
 	// 2. Send the update request
-	// 2.1 Create the URL
-	fullUrl, err := url.JoinPath(s.rootUrl.String(), GetUpdateEndpoint(item.UUID))
-	if err != nil {
-		slog.Error(ErrorGeneratingURL, "error", err)
-		return nil, err
-	}
-
-	// 2.2 Send the request
-	response, err := s.client.Put(fullUrl, updateRequest, &WorkItemUpdateResponse{})
+	// 2.1 Send the request
+	req := s.client.R().SetPathParam("uuid", item.UUID.String()).SetBody(&updateRequest).SetResult(&WorkItemUpdateResponse{})
+	response, err := req.Put("neighborhoods/{neighborhood}/migrations/{uuid}")
 	if err != nil {
 		slog.Error("error claiming work item", "error", err)
 		return nil, err

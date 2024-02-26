@@ -4,10 +4,10 @@ import (
 	"errors"
 	"log/slog"
 	"net/url"
+	"strconv"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
-	"github.com/liftedinit/mfx-migrator/internal/httpclient"
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
@@ -32,8 +32,9 @@ Trying to claim a work item that is already failed should return an error, unles
 		force := viper.GetBool("force")
 		username := viper.GetString("username")
 		password := viper.GetString("password")
+		neighborhood := viper.GetUint64("neighborhood")
 
-		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "force", force, "username", username)
+		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "force", force, "username", username, "neighborhood", neighborhood)
 
 		if username == "" || password == "" {
 			slog.Error("username and password are required")
@@ -47,8 +48,8 @@ Trying to claim a work item that is already failed should return an error, unles
 			return err
 		}
 
-		// Create a new store with the default HTTP client
-		s := store.New(url)
+		r := resty.New().SetBaseURL(url.String()).SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10))
+		s := store.NewWithClient(r)
 
 		// Login to the remote database
 		token, err := s.Login(username, password)
@@ -62,7 +63,7 @@ Trying to claim a work item that is already failed should return an error, unles
 		}
 
 		// Create a new authenticated HTTP client and set it on the store
-		s.SetClient(httpclient.NewWithClient(resty.New().SetAuthToken(token)))
+		r.SetAuthToken(token)
 
 		// Try claiming a work item
 		var item *store.WorkItem

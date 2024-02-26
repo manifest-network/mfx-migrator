@@ -13,16 +13,19 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
-	"github.com/liftedinit/mfx-migrator/internal/httpclient"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	uuidv4Regex   = "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}"
-	rootUrl       = "http://fakeurl:3001/api/v1/"
-	migrationsUrl = rootUrl + "neighborhoods/2/migrations"                // TODO: Remove `neighborhoods/2/`
-	migrationUrl  = rootUrl + "neighborhoods/2/migrations/" + uuidv4Regex // TODO: Remove `neighborhoods/2/`
+	uuidv4Regex  = "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}"
+	rootUrl      = "http://fakeurl:3001/api/v1/"
+	neighborhood = "1"
+)
+
+var (
+	migrationsUrl = rootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", neighborhood)
+	migrationUrl  = migrationsUrl + uuidv4Regex
 )
 
 //go:embed testdata/work-items.json
@@ -70,6 +73,8 @@ func setupMockResponder(t *testing.T, method, url, filePath string, code int) {
 	} else {
 		responder = httpmock.NewErrorResponder(fmt.Errorf("not found"))
 	}
+
+	slog.Info("Setting up mock responder", "method", method, "url", url, "code", code)
 	httpmock.RegisterResponder(method, url, responder)
 }
 
@@ -80,11 +85,10 @@ func TestStore_Claim(t *testing.T) {
 	slog.SetDefault(logger)
 
 	testUrl, _ := url.Parse(rootUrl)
-	rClient := resty.New()
-	client := httpclient.NewWithClient(rClient)
+	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", neighborhood)
 	httpmock.ActivateNonDefault(rClient.GetClient())
 
-	s := store.NewWithClient(testUrl, client)
+	s := store.NewWithClient(rClient)
 
 	var tests = []testCase{
 		{"success_queue", []Endpoint{

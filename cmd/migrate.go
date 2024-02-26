@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"strconv"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/liftedinit/mfx-migrator/internal/httpclient"
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
@@ -23,8 +23,9 @@ var migrateCmd = &cobra.Command{
 		uuidStr := viper.GetString("migrate-uuid")
 		username := viper.GetString("username")
 		password := viper.GetString("password")
+		neighborhood := viper.GetUint64("neighborhood")
 
-		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "username", username)
+		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "username", username, "neighborhood", neighborhood)
 
 		if username == "" || password == "" {
 			slog.Error("username and password are required")
@@ -61,8 +62,8 @@ var migrateCmd = &cobra.Command{
 
 		slog.Debug("setting migration status to 'migrating'")
 
-		// Create a new store with the default HTTP client
-		s := store.New(url)
+		r := resty.New().SetBaseURL(url.String()).SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10))
+		s := store.NewWithClient(r)
 
 		// Login to the remote database
 		token, err := s.Login(username, password)
@@ -76,7 +77,7 @@ var migrateCmd = &cobra.Command{
 		}
 
 		// Create a new authenticated HTTP client and set it on the store
-		s.SetClient(httpclient.NewWithClient(resty.New().SetAuthToken(token)))
+		r.SetAuthToken(token)
 
 		// Set the work item status to 'migrating'
 		response, err := s.UpdateWorkItem(*item, store.MIGRATING)

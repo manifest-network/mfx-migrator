@@ -90,14 +90,20 @@ func init() {
 		slog.Error("unable to bind flag", "error", err)
 	}
 
-	rootCmd.Flags().String("username", "", "Username for the remote database")
-	err = viper.BindPFlag("username", rootCmd.Flags().Lookup("username"))
+	rootCmd.PersistentFlags().Uint64("neighbourhood", 2, "Neighbourhood ID")
+	err = viper.BindPFlag("neighbourhood", rootCmd.PersistentFlags().Lookup("neighbourhood"))
 	if err != nil {
 		slog.Error("could not bind flag", "error", err)
 	}
 
-	rootCmd.Flags().String("password", "", "Password for the remote database")
-	err = viper.BindPFlag("password", rootCmd.Flags().Lookup("password"))
+	rootCmd.PersistentFlags().String("username", "", "Username for the remote database")
+	err = viper.BindPFlag("username", rootCmd.PersistentFlags().Lookup("username"))
+	if err != nil {
+		slog.Error("could not bind flag", "error", err)
+	}
+
+	rootCmd.PersistentFlags().String("password", "", "Password for the remote database")
+	err = viper.BindPFlag("password", rootCmd.PersistentFlags().Lookup("password"))
 	if err != nil {
 		slog.Error("could not bind flag", "error", err)
 	}
