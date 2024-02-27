@@ -9,11 +9,12 @@ import (
 	"strconv"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/liftedinit/mfx-migrator/internal/chain"
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // migrateCmd represents the migrate command

@@ -40,7 +40,7 @@ func Migrate(to string, amount int64, denom string) (*cosmosclient.Response, *ti
 		return nil, nil, err
 	}
 
-	txService, err := client.BankSendTx(ctx, account, to, sdk.Coins{{denom, sdk.NewInt(amount)}})
+	txService, err := client.BankSendTx(ctx, account, to, sdk.Coins{{Denom: denom, Amount: sdk.NewInt(amount)}})
 	if err != nil {
 		slog.Error("could not create send transaction", "error", err)
 		return nil, nil, err

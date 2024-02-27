@@ -13,8 +13,9 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
-	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/stretchr/testify/require"
+
+	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
 const (

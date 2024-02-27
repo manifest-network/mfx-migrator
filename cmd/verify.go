@@ -4,9 +4,10 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/liftedinit/mfx-migrator/internal/localstate"
 )
 
 // verifyCmd represents the verify command

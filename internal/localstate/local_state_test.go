@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
-	"github.com/stretchr/testify/require"
 )
 
 func setup(t *testing.T) string {

@@ -3,8 +3,9 @@ package store_test
 import (
 	"testing"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/stretchr/testify/require"
+
+	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
 func TestStore_WorkItemStatus(t *testing.T) {
