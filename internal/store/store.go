@@ -19,14 +19,11 @@ func NewWithClient(client *resty.Client) *Store {
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
 func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 	// 1. Get all work items from remote
-	req := s.client.R().SetResult(&WorkItems{})
-	response, err := req.Get("neighborhoods/{neighborhood}/migrations/")
+	items, err := s.GetAllWorkItems()
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
 		return nil, err
 	}
-
-	items := response.Result().(*WorkItems)
 	slog.Debug("available work items", "items", items)
 
 	// 2. Loop over all work items
@@ -58,14 +55,11 @@ func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 
 func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, error) {
 	// 1. Get the work item from the remote database
-	req := s.client.R().SetPathParam("uuid", uuid.String()).SetResult(&WorkItem{})
-	response, err := req.Get("neighborhoods/{neighborhood}/migrations/{uuid}")
+	item, err := s.GetWorkItem(uuid)
 	if err != nil {
 		slog.Error(ErrorGettingWorkItem, "error", err)
 		return nil, err
 	}
-
-	item := response.Result().(*WorkItem)
 	slog.Debug("work item", "item", item)
 
 	// 2. Check if the work item is in the correct state to be claimed
@@ -73,7 +67,7 @@ func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, er
 		// If the work item is not in the correct state, we can't claim it, unless we're forcing it
 		if !force {
 			slog.Error("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
-			return nil, fmt.Errorf("work item not in the correct state to be claimed: %s", item.UUID)
+			return nil, fmt.Errorf("work item not in the correct state to be claimed: %s, %s", item.UUID, item.Status.String())
 		}
 		slog.Warn("forcing re-claim of work item", "uuid", item.UUID, "status", item.Status)
 	}
@@ -110,6 +104,32 @@ func (s *Store) tryToClaimWorkItem(item *WorkItem) (*WorkItem, error) {
 	return nil, nil
 }
 
+// GetWorkItem retrieves a work item from the remote database by UUID.
+func (s *Store) GetWorkItem(uuid uuid.UUID) (*WorkItem, error) {
+	req := s.client.R().SetPathParam("uuid", uuid.String()).SetResult(&WorkItem{})
+	response, err := req.Get("neighborhoods/{neighborhood}/migrations/{uuid}")
+	if err != nil {
+		slog.Error(ErrorGettingWorkItem, "error", err)
+		return nil, err
+	}
+
+	item := response.Result().(*WorkItem)
+	return item, nil
+}
+
+// GetAllWorkItems retrieves all work items from the remote database.
+func (s *Store) GetAllWorkItems() (*WorkItems, error) {
+	req := s.client.R().SetResult(&WorkItems{})
+	response, err := req.Get("neighborhoods/{neighborhood}/migrations/")
+	if err != nil {
+		slog.Error(ErrorGettingWorkItems, "error", err)
+		return nil, err
+	}
+
+	items := response.Result().(*WorkItems)
+	return items, nil
+}
+
 // UpdateWorkItem updates the status of a work item in the remote database.
 func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemUpdateResponse, error) {
 	// 1. Create an update request
@@ -117,6 +137,7 @@ func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemU
 		Status:           status,
 		ManifestDatetime: item.ManifestDatetime,
 		ManifestHash:     item.ManifestHash,
+		Error:            item.Error,
 	}
 
 	// 2. Send the update request

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/liftedinit/mfx-migrator/internal/chain"
 	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 	"github.com/spf13/cobra"
@@ -51,17 +53,13 @@ var migrateCmd = &cobra.Command{
 			return err
 		}
 
-		// Verify the work item is claimed
-		if item.Status != store.CLAIMED {
-			slog.Error("work item not claimed", "uuid", uuidStr)
-			return fmt.Errorf("work item not claimed: %s", uuidStr)
+		// Verify the work item status is valid for migration
+		if !(item.Status == store.CLAIMED || item.Status == store.MIGRATING) {
+			slog.Error("local work item status not valid for migration", "uuid", uuidStr, "status", item.Status)
+			return fmt.Errorf("local work item status not valid for migration: %s, %s", uuidStr, item.Status)
 		}
 
-		// Execute the migration
-		slog.Info("migrating", "uuid", item.UUID)
-
-		slog.Debug("setting migration status to 'migrating'")
-
+		// Create a new store instance
 		r := resty.New().SetBaseURL(url.String()).SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10))
 		s := store.NewWithClient(r)
 
@@ -81,32 +79,132 @@ var migrateCmd = &cobra.Command{
 		// Set the auth token
 		r.SetAuthToken(token.AccessToken)
 
-		// Set the work item status to 'migrating'
-		response, err := s.UpdateWorkItem(*item, store.MIGRATING)
+		// Get the work item from the remote database
+		slog.Debug("getting work item from remote database", "uuid", item.UUID)
+		remoteItem, err := s.GetWorkItem(item.UUID)
 		if err != nil {
-			slog.Error("could not update work item", "error", err)
+			slog.Error("could not get work item from remote", "error", err)
 			return err
 		}
 
-		// An error occurred setting the work item status to 'migrating'
-		if response.Status != store.MIGRATING {
-			slog.Error("work item not migrating", "uuid", item.UUID)
-			return fmt.Errorf("work item not migrating: %s", item.UUID)
+		// Verify the work item status is valid for migration
+		if !(remoteItem.Status == store.CLAIMED || remoteItem.Status == store.MIGRATING) {
+			slog.Error("remote work item status not valid for migration", "uuid", uuidStr, "status", item.Status)
+			return fmt.Errorf("remote work item status not valid for migration: %s, %s", uuidStr, item.Status)
 		}
 
-		item.Status = store.MIGRATING
+		// Compare the local and remote work items
+		slog.Debug("comparing local and remote work items")
+		if !item.Equal(*remoteItem) {
+			slog.Error("local and remote work items do not match", "local", item, "remote", remoteItem)
+			return fmt.Errorf("local and remote work items do not match: %s, %s", item.UUID, remoteItem.UUID)
+		}
+		slog.Debug("local and remote work items match")
+
+		// Set the work item status to 'migrating' if it is not already
+		if item.Status != store.MIGRATING {
+			slog.Debug("setting work item status to migrating", "uuid", item.UUID)
+			// Set the work item status to 'migrating'
+			response, err := s.UpdateWorkItem(*item, store.MIGRATING)
+			if err != nil {
+				slog.Error("could not update work item", "error", err)
+				return err
+			}
+
+			// An error occurred setting the work item status to 'migrating'
+			if response.Status != store.MIGRATING {
+				slog.Error("work item not migrating", "uuid", item.UUID)
+				return fmt.Errorf("work item not migrating: %s", item.UUID)
+			}
+
+			item.Status = store.MIGRATING
+		}
+
+		// Save the local state
+		slog.Debug("saving state", "item", item)
 		err = localstate.SaveState(item)
 		if err != nil {
 			slog.Error("could not save state", "error", err)
 			return err
 		}
 
-		// 3. Execute the migration
-		// 4. Verify the migration was successful
-		// 5. POST the 'talib/complete-work/' endpoint to complete the work item
-		//   5.1. If the work item is completed, the `*.uuid` file should be removed
-		//        Note: Completed involves both successful and failed migrations.
-		//              Failed migrations should have a reason for failure persisted to the database.
+		// Execute the migration
+		txResponse, blockTime, err := chain.Migrate(item.ManifestAddress, 10, "token")
+		//txResponse, blockTime, err := chain.Migrate("gc13ar86s8yqpne8gyqez9jvs9uhaa6j0yjqcx02r", 10, "token")
+		if err != nil {
+			slog.Error("could not migrate", "error", err)
+
+			// Try to set the work item status to 'failed'
+			slog.Debug("setting work item status to failed", "uuid", item.UUID)
+			errStr := err.Error()
+			item.Error = &errStr
+			response, err := s.UpdateWorkItem(*item, store.FAILED)
+			if err != nil {
+				slog.Error("could not update work item", "error", err)
+				return err
+			}
+
+			if response.Status != store.FAILED {
+				slog.Error("work item not failed", "uuid", item.UUID)
+				return fmt.Errorf("work item not failed: %s", item.UUID)
+			}
+
+			item.Status = store.FAILED
+			slog.Debug("saving state", "item", item)
+			err = localstate.SaveState(item)
+			if err != nil {
+				slog.Error("could not save state", "error", err)
+				return err
+			}
+
+			return err
+		}
+
+		// Verify the migration was successful
+		slog.Debug("verifying migration", "response", txResponse)
+		if txResponse.Code != 0 {
+			slog.Error("migration failed", "code", txResponse.Code, "log", txResponse.RawLog)
+			return fmt.Errorf("migration failed: %s", txResponse.RawLog)
+		}
+
+		if blockTime == nil {
+			slog.Error("block time is nil")
+			return errors.New("block time is nil")
+		}
+
+		// Show the transaction hash
+		slog.Info("migration succeeded", "tx_hash", txResponse.TxHash, "timestamp", txResponse.Timestamp)
+
+		item.ManifestDatetime = blockTime
+		item.ManifestHash = &txResponse.TxHash
+
+		slog.Debug("setting work item status to completed", "uuid", item.UUID)
+		response, err := s.UpdateWorkItem(*item, store.COMPLETED)
+		if err != nil {
+			slog.Error("could not update work item", "error", err)
+			return err
+		}
+
+		// An error occurred setting the work item status to 'completed'
+		if response.Status != store.COMPLETED {
+			slog.Error("work item not completed", "uuid", item.UUID)
+			slog.Debug("saving state", "item", item)
+			item.Status = store.COMPLETED
+			err = localstate.SaveState(item)
+			if err != nil {
+				slog.Error("could not save state", "error", err)
+				return err
+			}
+			return fmt.Errorf("work item not completed: %s", item.UUID)
+		}
+
+		// At this point, the work item status is 'completed' and we can delete the local state
+		slog.Debug("deleting state", "uuid", item.UUID)
+		err = os.Remove(fmt.Sprintf("%s.json", item.UUID))
+		if err != nil {
+			slog.Error("could not delete state", "error", err)
+			return err
+		}
 
 		return nil
 	},
