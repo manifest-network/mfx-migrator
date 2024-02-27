@@ -31,6 +31,8 @@ func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 		// 2.0 Check if the work item is in the correct state to be claimed
 		if item.Status != CREATED {
 			slog.Debug("work item not in the correct state to be claimed", "uuid", item.UUID, "status", item.Status)
+
+			// If the work item is not in the correct state, we can't claim it. Continue to the next one
 			continue
 		}
 
@@ -93,6 +95,12 @@ func (s *Store) tryToClaimWorkItem(item *WorkItem) (*WorkItem, error) {
 		return nil, err
 	}
 
+	// 1.1 Make sure we have a response
+	if updateResponse == nil {
+		slog.Error("no update response returned when claiming work item")
+		return nil, fmt.Errorf("no update response returned when claiming work item: %s", item.UUID)
+	}
+
 	// 2. Check if the work item was claimed
 	if updateResponse.Status == CLAIMED {
 		slog.Debug("work item claimed", "uuid", item.UUID)
@@ -147,6 +155,11 @@ func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemU
 	if err != nil {
 		slog.Error("error claiming work item", "error", err)
 		return nil, err
+	}
+
+	if response == nil {
+		slog.Error("no response returned when claiming work item")
+		return nil, fmt.Errorf("no response returned when claiming work item: %s", item.UUID)
 	}
 
 	slog.Debug("update response",

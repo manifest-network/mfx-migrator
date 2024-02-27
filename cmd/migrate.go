@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/spf13/cobra"
@@ -60,8 +61,13 @@ var migrateCmd = &cobra.Command{
 			return fmt.Errorf("local work item status not valid for migration: %s, %s", uuidStr, item.Status)
 		}
 
-		// Create a new store instance
-		r := resty.New().SetBaseURL(url.String()).SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10))
+		// Retry the claim process 3 times with a 5 seconds wait time between retries and a maximum wait time of 60 seconds.
+		// Retry uses an exponential backoff algorithm.
+		r := resty.New().
+			SetBaseURL(url.String()).
+			SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
+			SetRetryCount(3).
+			SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(60 * time.Second)
 		s := store.NewWithClient(r)
 
 		// Login to the remote database

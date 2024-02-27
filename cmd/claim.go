@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
@@ -49,7 +50,13 @@ Trying to claim a work item that is already failed should return an error, unles
 			return err
 		}
 
-		r := resty.New().SetBaseURL(url.String()).SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10))
+		// Retry the claim process 3 times with a 5 seconds wait time between retries and a maximum wait time of 60 seconds.
+		// Retry uses an exponential backoff algorithm.
+		r := resty.New().
+			SetBaseURL(url.String()).
+			SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
+			SetRetryCount(3).
+			SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(60 * time.Second)
 		s := store.NewWithClient(r)
 
 		// Login to the remote database
@@ -61,11 +68,17 @@ Trying to claim a work item that is already failed should return an error, unles
 		}
 
 		token := response.Result().(*store.Token)
-		if token.AccessToken == "" {
+		if token == nil {
 			slog.Error("no token returned")
-			return err
+			return errors.New("no token returned")
 		}
 
+		if token.AccessToken == "" {
+			slog.Error("empty token returned")
+			return errors.New("empty token returned")
+		}
+
+		slog.Debug("setting auth token", "token", token.AccessToken)
 		// Set the auth token
 		r.SetAuthToken(token.AccessToken)
 
