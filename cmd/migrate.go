@@ -4,12 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
-	"strconv"
-	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -23,33 +19,15 @@ var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Execute the MFX token migration associated with the given UUID.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		urlStr := viper.GetString("url")
-		uuidStr := viper.GetString("migrate-uuid")
-		username := viper.GetString("username")
-		password := viper.GetString("password")
-		neighborhood := viper.GetUint64("neighborhood")
+		config := LoadConfigFromCLI("migrate-uuid")
+		slog.Debug("args", "config", config)
 
-		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "username", username, "neighborhood", neighborhood)
-
-		if username == "" || password == "" {
-			slog.Error("username and password are required")
-			return errors.New("username and password are required")
-		}
-
-		// Parse the URL
-		url, err := url.Parse(urlStr)
-		if err != nil {
-			slog.Error("could not parse URL", "error", err)
+		if err := config.Validate(); err != nil {
 			return err
 		}
 
-		if uuidStr == "" {
-			slog.Error("uuid is required")
-			return errors.New("uuid is required")
-		}
-
 		// Load the local state from the *.uuid file
-		item, err := localstate.LoadState(uuidStr)
+		item, err := localstate.LoadState(config.UUID)
 		if err != nil {
 			slog.Error("unable to load state", "error", err)
 			return err
@@ -57,38 +35,18 @@ var migrateCmd = &cobra.Command{
 
 		// Verify the work item status is valid for migration
 		if !(item.Status == store.CLAIMED || item.Status == store.MIGRATING) {
-			slog.Error("local work item status not valid for migration", "uuid", uuidStr, "status", item.Status)
-			return fmt.Errorf("local work item status not valid for migration: %s, %s", uuidStr, item.Status)
+			slog.Error("local work item status not valid for migration", "uuid", config.UUID, "status", item.Status)
+			return fmt.Errorf("local work item status not valid for migration: %s, %s", config.UUID, item.Status)
 		}
 
-		// Retry the claim process 3 times with a 5 seconds wait time between retries and a maximum wait time of 60 seconds.
-		// Retry uses an exponential backoff algorithm.
-		r := resty.New().
-			SetBaseURL(url.String()).
-			SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
-			SetRetryCount(3).
-			SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(60 * time.Second)
-		s := store.NewWithClient(r)
-
-		// Login to the remote database
-		slog.Debug("logging in", "username", username, "password", "[REDACTED]")
-		loginResponse, err := r.R().SetBody(map[string]interface{}{"username": username, "password": password}).SetResult(&store.Token{}).Post("/auth/login")
-		if err != nil {
-			slog.Error("could not login", "error", err)
+		r := CreateRestClient(config.Url, config.Neighborhood)
+		if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
 			return err
 		}
-		token := loginResponse.Result().(*store.Token)
-		if token.AccessToken == "" {
-			slog.Error("no token returned")
-			return err
-		}
-
-		// Set the auth token
-		r.SetAuthToken(token.AccessToken)
 
 		// Get the work item from the remote database
 		slog.Debug("getting work item from remote database", "uuid", item.UUID)
-		remoteItem, err := s.GetWorkItem(item.UUID)
+		remoteItem, err := store.GetWorkItem(r, item.UUID)
 		if err != nil {
 			slog.Error("could not get work item from remote", "error", err)
 			return err
@@ -96,8 +54,8 @@ var migrateCmd = &cobra.Command{
 
 		// Verify the work item status is valid for migration
 		if !(remoteItem.Status == store.CLAIMED || remoteItem.Status == store.MIGRATING) {
-			slog.Error("remote work item status not valid for migration", "uuid", uuidStr, "status", item.Status)
-			return fmt.Errorf("remote work item status not valid for migration: %s, %s", uuidStr, item.Status)
+			slog.Error("remote work item status not valid for migration", "uuid", config.UUID, "status", item.Status)
+			return fmt.Errorf("remote work item status not valid for migration: %s, %s", config.UUID, item.Status)
 		}
 
 		// Compare the local and remote work items
@@ -112,7 +70,7 @@ var migrateCmd = &cobra.Command{
 		if item.Status != store.MIGRATING {
 			slog.Debug("setting work item status to migrating", "uuid", item.UUID)
 			// Set the work item status to 'migrating'
-			response, err := s.UpdateWorkItem(*item, store.MIGRATING)
+			response, err := store.UpdateWorkItem(r, *item, store.MIGRATING)
 			if err != nil {
 				slog.Error("could not update work item", "error", err)
 				return err
@@ -145,7 +103,7 @@ var migrateCmd = &cobra.Command{
 			slog.Debug("setting work item status to failed", "uuid", item.UUID)
 			errStr := err.Error()
 			item.Error = &errStr
-			response, err := s.UpdateWorkItem(*item, store.FAILED)
+			response, err := store.UpdateWorkItem(r, *item, store.FAILED)
 			if err != nil {
 				slog.Error("could not update work item", "error", err)
 				return err
@@ -186,7 +144,7 @@ var migrateCmd = &cobra.Command{
 		item.ManifestHash = &txResponse.TxHash
 
 		slog.Debug("setting work item status to completed", "uuid", item.UUID)
-		response, err := s.UpdateWorkItem(*item, store.COMPLETED)
+		response, err := store.UpdateWorkItem(r, *item, store.COMPLETED)
 		if err != nil {
 			slog.Error("could not update work item", "error", err)
 			return err
@@ -219,7 +177,11 @@ var migrateCmd = &cobra.Command{
 
 func init() {
 	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	err := viper.BindPFlag("migrate-uuid", migrateCmd.Flags().Lookup("uuid"))
+	err := migrateCmd.MarkFlagRequired("uuid")
+	if err != nil {
+		slog.Error("could not mark flag required", "error", err)
+	}
+	err = viper.BindPFlag("migrate-uuid", migrateCmd.Flags().Lookup("uuid"))
 	if err != nil {
 		slog.Error("unable to bind flag", "error", err)
 	}

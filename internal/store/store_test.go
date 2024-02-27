@@ -89,15 +89,13 @@ func TestStore_Claim(t *testing.T) {
 	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", neighborhood)
 	httpmock.ActivateNonDefault(rClient.GetClient())
 
-	s := store.NewWithClient(rClient)
-
 	var tests = []testCase{
 		{"success_queue", []Endpoint{
 			{"GET", migrationsUrl, "testdata/work-items.json", http.StatusOK},
 			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-success.json", http.StatusOK},
 		}, func() {
-			item, err := s.ClaimWorkItemFromQueue()
+			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.NotEqual(t, uuid.Nil, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
@@ -107,7 +105,7 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
 		}, func() {
-			item, err := s.ClaimWorkItemFromQueue()
+			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.NoError(t, err)
 			require.Nil(t, item)
 		}},
@@ -116,7 +114,7 @@ func TestStore_Claim(t *testing.T) {
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-success.json", http.StatusOK},
 		}, func() {
 			myUUID := uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f")
-			item, err := s.ClaimWorkItemFromUUID(myUUID, false)
+			item, err := store.ClaimWorkItemFromUUID(rClient, myUUID, false)
 			require.Equal(t, myUUID, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
@@ -126,14 +124,14 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
 		}, func() {
-			item, err := s.ClaimWorkItemFromUUID(uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
+			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
 			require.Error(t, err) // unable to claim the work item
 			require.Nil(t, item)
 		}},
 		{"failure_uuid_not_found", []Endpoint{
 			{"GET", "=~^" + migrationUrl, "", http.StatusNotFound},
 		}, func() {
-			item, err := s.ClaimWorkItemFromUUID(uuid.New(), false)
+			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.New(), false)
 			require.Error(t, err) // work item not found
 			require.Nil(t, item)
 		}},
@@ -142,7 +140,7 @@ func TestStore_Claim(t *testing.T) {
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-force.json", http.StatusOK},
 		}, func() {
 			myUUID := uuid.MustParse("c726e305-089a-4a50-b6b6-c707d45221f2")
-			item, err := s.ClaimWorkItemFromUUID(myUUID, true)
+			item, err := store.ClaimWorkItemFromUUID(rClient, myUUID, true)
 			require.Equal(t, myUUID, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
@@ -151,14 +149,14 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item-force.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
 		}, func() {
-			item, err := s.ClaimWorkItemFromUUID(uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
+			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
 			require.Error(t, err) // work item not in the correct state to be claimed and force is false
 			require.Nil(t, item)
 		}},
 		{"invalid_all_work_items_url", []Endpoint{
 			{"GET", migrationsUrl, "", http.StatusNotFound},
 		}, func() {
-			_, err := s.ClaimWorkItemFromQueue()
+			_, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to list work items
 		}},
 		{"invalid_update_work_item_url", []Endpoint{
@@ -166,7 +164,7 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "", http.StatusNotFound},
 		}, func() {
-			_, err := s.ClaimWorkItemFromQueue()
+			_, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to claim the work item
 		}},
 	}

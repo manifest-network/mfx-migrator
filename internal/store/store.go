@@ -8,18 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
-type Store struct {
-	client *resty.Client
-}
-
-func NewWithClient(client *resty.Client) *Store {
-	return &Store{client: client}
-}
-
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
-func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
+func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
 	// 1. Get all work items from remote
-	items, err := s.GetAllWorkItems()
+	items, err := GetAllWorkItems(r)
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
 		return nil, err
@@ -37,7 +29,7 @@ func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 		}
 
 		// 2.1 Try to claim the work item
-		claimedItem, err := s.tryToClaimWorkItem(&item)
+		claimedItem, err := tryToClaimWorkItem(r, &item)
 		if err != nil {
 			slog.Error(ErrorClaimingWorkItem, "error", err)
 			return nil, err
@@ -55,9 +47,9 @@ func (s *Store) ClaimWorkItemFromQueue() (*WorkItem, error) {
 	return nil, nil
 }
 
-func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, error) {
+func ClaimWorkItemFromUUID(r *resty.Client, uuid uuid.UUID, force bool) (*WorkItem, error) {
 	// 1. Get the work item from the remote database
-	item, err := s.GetWorkItem(uuid)
+	item, err := GetWorkItem(r, uuid)
 	if err != nil {
 		slog.Error(ErrorGettingWorkItem, "error", err)
 		return nil, err
@@ -75,7 +67,7 @@ func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, er
 	}
 
 	// 3. Try to claim the work item
-	claimedItem, err := s.tryToClaimWorkItem(item)
+	claimedItem, err := tryToClaimWorkItem(r, item)
 	if err != nil {
 		slog.Error(ErrorClaimingWorkItem, "error", err)
 		return nil, err
@@ -87,9 +79,9 @@ func (s *Store) ClaimWorkItemFromUUID(uuid uuid.UUID, force bool) (*WorkItem, er
 	return nil, fmt.Errorf("unable to claim the work item: %s", uuid)
 }
 
-func (s *Store) tryToClaimWorkItem(item *WorkItem) (*WorkItem, error) {
+func tryToClaimWorkItem(r *resty.Client, item *WorkItem) (*WorkItem, error) {
 	// 1. Try to claim the work item
-	updateResponse, err := s.UpdateWorkItem(*item, CLAIMED)
+	updateResponse, err := UpdateWorkItem(r, *item, CLAIMED)
 	if err != nil {
 		slog.Warn("unable to claim the work item", "msg", err)
 		return nil, err
@@ -113,8 +105,10 @@ func (s *Store) tryToClaimWorkItem(item *WorkItem) (*WorkItem, error) {
 }
 
 // GetWorkItem retrieves a work item from the remote database by UUID.
-func (s *Store) GetWorkItem(uuid uuid.UUID) (*WorkItem, error) {
-	req := s.client.R().SetPathParam("uuid", uuid.String()).SetResult(&WorkItem{})
+func GetWorkItem(r *resty.Client, uuid uuid.UUID) (*WorkItem, error) {
+	req := r.R().
+		SetPathParam("uuid", uuid.String()).
+		SetResult(&WorkItem{})
 	response, err := req.Get("neighborhoods/{neighborhood}/migrations/{uuid}")
 	if err != nil {
 		slog.Error(ErrorGettingWorkItem, "error", err)
@@ -126,8 +120,8 @@ func (s *Store) GetWorkItem(uuid uuid.UUID) (*WorkItem, error) {
 }
 
 // GetAllWorkItems retrieves all work items from the remote database.
-func (s *Store) GetAllWorkItems() (*WorkItems, error) {
-	req := s.client.R().SetResult(&WorkItems{})
+func GetAllWorkItems(r *resty.Client) (*WorkItems, error) {
+	req := r.R().SetResult(&WorkItems{})
 	response, err := req.Get("neighborhoods/{neighborhood}/migrations/")
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
@@ -139,7 +133,7 @@ func (s *Store) GetAllWorkItems() (*WorkItems, error) {
 }
 
 // UpdateWorkItem updates the status of a work item in the remote database.
-func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemUpdateResponse, error) {
+func UpdateWorkItem(r *resty.Client, item WorkItem, status WorkItemStatus) (*WorkItemUpdateResponse, error) {
 	// 1. Create an update request
 	updateRequest := WorkItemUpdateRequest{
 		Status:           status,
@@ -150,7 +144,10 @@ func (s *Store) UpdateWorkItem(item WorkItem, status WorkItemStatus) (*WorkItemU
 
 	// 2. Send the update request
 	// 2.1 Send the request
-	req := s.client.R().SetPathParam("uuid", item.UUID.String()).SetBody(&updateRequest).SetResult(&WorkItemUpdateResponse{})
+	req := r.R().
+		SetPathParam("uuid", item.UUID.String()).
+		SetBody(&updateRequest).
+		SetResult(&WorkItemUpdateResponse{})
 	response, err := req.Put("neighborhoods/{neighborhood}/migrations/{uuid}")
 	if err != nil {
 		slog.Error("error claiming work item", "error", err)

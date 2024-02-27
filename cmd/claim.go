@@ -1,11 +1,7 @@
 package cmd
 
 import (
-	"errors"
 	"log/slog"
-	"net/url"
-	"strconv"
-	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
@@ -29,74 +25,20 @@ Trying to claim a work item that is already claimed should return an error.
 Trying to claim a work item that is already completed should return an error.
 Trying to claim a work item that is already failed should return an error, unless the '-f' flag is set.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		urlStr := viper.GetString("url")
-		uuidStr := viper.GetString("claim-uuid")
-		force := viper.GetBool("force")
-		username := viper.GetString("username")
-		password := viper.GetString("password")
-		neighborhood := viper.GetUint64("neighborhood")
+		config := LoadConfigFromCLI("claim-uuid")
+		slog.Debug("args", "config", config)
 
-		slog.Debug("args", "url", urlStr, "uuid", uuidStr, "force", force, "username", username, "neighborhood", neighborhood)
-
-		if username == "" || password == "" {
-			slog.Error("username and password are required")
-			return errors.New("username and password are required")
-		}
-
-		// Parse the URL
-		url, err := url.Parse(urlStr)
-		if err != nil {
-			slog.Error("could not parse URL", "error", err)
+		if err := config.Validate(); err != nil {
 			return err
 		}
 
-		// Retry the claim process 3 times with a 5 seconds wait time between retries and a maximum wait time of 60 seconds.
-		// Retry uses an exponential backoff algorithm.
-		r := resty.New().
-			SetBaseURL(url.String()).
-			SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
-			SetRetryCount(3).
-			SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(60 * time.Second)
-		s := store.NewWithClient(r)
-
-		// Login to the remote database
-		slog.Debug("logging in", "username", username, "password", "[REDACTED]")
-		response, err := r.R().SetBody(map[string]interface{}{"username": username, "password": password}).SetResult(&store.Token{}).Post("/auth/login")
-		if err != nil {
-			slog.Error("could not login", "error", err)
+		r := CreateRestClient(config.Url, config.Neighborhood)
+		if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
 			return err
 		}
 
-		token := response.Result().(*store.Token)
-		if token == nil {
-			slog.Error("no token returned")
-			return errors.New("no token returned")
-		}
+		item, err := claimWorkItem(r, config.UUID, config.Force)
 
-		if token.AccessToken == "" {
-			slog.Error("empty token returned")
-			return errors.New("empty token returned")
-		}
-
-		slog.Debug("setting auth token", "token", token.AccessToken)
-		// Set the auth token
-		r.SetAuthToken(token.AccessToken)
-
-		// Try claiming a work item
-		var item *store.WorkItem
-		if uuidStr != "" {
-			item, err = s.ClaimWorkItemFromUUID(uuid.MustParse(uuidStr), force)
-		} else {
-			item, err = s.ClaimWorkItemFromQueue()
-		}
-
-		// An error occurred during the claim
-		if err != nil {
-			slog.Error("could not claim work item", "error", err)
-			return err
-		}
-
-		// If we have a work item, save it to the local state
 		if item != nil {
 			err = localstate.SaveState(item)
 			if err != nil {
@@ -111,6 +53,11 @@ Trying to claim a work item that is already failed should return an error, unles
 }
 
 func init() {
+	setupFlags()
+	rootCmd.AddCommand(claimCmd)
+}
+
+func setupFlags() {
 	claimCmd.Flags().BoolP("force", "f", false, "Force re-claiming of a failed work item")
 	err := viper.BindPFlag("force", claimCmd.Flags().Lookup("force"))
 	if err != nil {
@@ -122,6 +69,26 @@ func init() {
 	if err != nil {
 		slog.Error("could not bind flag", "error", err)
 	}
+}
 
-	rootCmd.AddCommand(claimCmd)
+// claimWorkItem claims a work item from the database
+func claimWorkItem(r *resty.Client, uuidStr string, force bool) (*store.WorkItem, error) {
+	slog.Info("Claiming work item...")
+	var err error
+	var item *store.WorkItem
+	if uuidStr != "" {
+		item, err = store.ClaimWorkItemFromUUID(r, uuid.MustParse(uuidStr), force)
+	} else {
+		item, err = store.ClaimWorkItemFromQueue(r)
+	}
+
+	// An error occurred during the claim
+	if err != nil {
+		slog.Error("could not claim work item", "error", err)
+		return nil, err
+	}
+
+	slog.Info("work item claimed", "uuid", item.UUID)
+
+	return item, nil
 }
