@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 

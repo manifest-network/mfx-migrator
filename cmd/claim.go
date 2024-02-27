@@ -38,6 +38,9 @@ Trying to claim a work item that is already failed should return an error, unles
 		}
 
 		item, err := claimWorkItem(r, config.UUID, config.Force)
+		if err != nil {
+			return err
+		}
 
 		if item != nil {
 			err = localstate.SaveState(item)
