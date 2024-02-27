@@ -69,6 +69,7 @@ func Migrate(to string, amount int64, denom string) (*cosmosclient.Response, *ti
 	return &txResponse, blockTime, nil
 }
 
+// getBlockTime returns the time of the block at the given height.
 func getBlockTime(height int64) (*time.Time, error) {
 	ctx := context.Background()
 

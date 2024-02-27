@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 type WorkItem struct {
@@ -17,31 +19,14 @@ type WorkItem struct {
 	Error            *string        `json:"error"`
 }
 
+// Equal returns true if the WorkItem is equal to the other WorkItem
 func (wi WorkItem) Equal(other WorkItem) bool {
-	if wi.Status != other.Status {
-		return false
-	}
-	if (wi.CreatedDate == nil) != (other.CreatedDate == nil) || (wi.CreatedDate != nil && !wi.CreatedDate.Equal(*other.CreatedDate)) {
-		return false
-	}
-	if wi.UUID != other.UUID {
-		return false
-	}
-	if wi.ManyHash != other.ManyHash {
-		return false
-	}
-	if wi.ManifestAddress != other.ManifestAddress {
-		return false
-	}
-	if (wi.ManifestHash == nil) != (other.ManifestHash == nil) || (wi.ManifestHash != nil && *wi.ManifestHash != *other.ManifestHash) {
-		return false
-	}
-	if (wi.ManifestDatetime == nil) != (other.ManifestDatetime == nil) || (wi.ManifestDatetime != nil && !wi.ManifestDatetime.Equal(*other.ManifestDatetime)) {
-		return false
-	}
-	if (wi.Error == nil) != (other.Error == nil) || (wi.Error != nil && *wi.Error != *other.Error) {
-		return false
-	}
-
-	return true
+	return wi.Status == other.Status &&
+		utils.EqualTimePtr(wi.CreatedDate, other.CreatedDate) &&
+		wi.UUID == other.UUID &&
+		wi.ManyHash == other.ManyHash &&
+		wi.ManifestAddress == other.ManifestAddress &&
+		utils.EqualStringPtr(wi.ManifestHash, other.ManifestHash) &&
+		utils.EqualTimePtr(wi.ManifestDatetime, other.ManifestDatetime) &&
+		utils.EqualStringPtr(wi.Error, other.Error)
 }
