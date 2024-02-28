@@ -61,8 +61,7 @@ func Execute() {
 		fmt.Println("No config file found")
 	}
 
-	err := rootCmd.Execute()
-	if err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
@@ -79,33 +78,28 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().StringP("logLevel", "l", "info", fmt.Sprintf("set log level (%s)", validLogLevelsStr))
-	err := viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel"))
-	if err != nil {
-		slog.Error("unable to bind flag", "error", err)
+	if err := viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	rootCmd.PersistentFlags().StringP("url", "u", "", "Root URL of the API server")
-	err = viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
-	if err != nil {
-		slog.Error("unable to bind flag", "error", err)
+	if err := viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	rootCmd.PersistentFlags().Uint64("neighbourhood", 2, "Neighbourhood ID")
-	err = viper.BindPFlag("neighbourhood", rootCmd.PersistentFlags().Lookup("neighbourhood"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
+	if err := viper.BindPFlag("neighbourhood", rootCmd.PersistentFlags().Lookup("neighbourhood")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	rootCmd.PersistentFlags().String("username", "", "Username for the remote database")
-	err = viper.BindPFlag("username", rootCmd.PersistentFlags().Lookup("username"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
+	if err := viper.BindPFlag("username", rootCmd.PersistentFlags().Lookup("username")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	rootCmd.PersistentFlags().String("password", "", "Password for the remote database")
-	err = viper.BindPFlag("password", rootCmd.PersistentFlags().Lookup("password"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
+	if err := viper.BindPFlag("password", rootCmd.PersistentFlags().Lookup("password")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	viper.AddConfigPath("./")

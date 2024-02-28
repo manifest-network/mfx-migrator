@@ -1,4 +1,4 @@
-package localstate_test
+package store_test
 
 import (
 	"os"
@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
@@ -37,10 +36,10 @@ func TestSaveLoadState(t *testing.T) {
 		ManifestHash:     nil,
 		ManifestDatetime: nil,
 	}
-	err := localstate.SaveState(item)
+	err := store.SaveState(item)
 	require.NoError(t, err)
 
-	otherItem, err := localstate.LoadState(someUUID.String())
+	otherItem, err := store.LoadState(someUUID.String())
 	require.NoError(t, err)
 	require.Equal(t, item, otherItem)
 }

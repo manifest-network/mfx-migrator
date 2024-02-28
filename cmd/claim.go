@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/liftedinit/mfx-migrator/internal/localstate"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
@@ -27,7 +26,6 @@ Trying to claim a work item that is already failed should return an error, unles
 	RunE: func(cmd *cobra.Command, args []string) error {
 		config := LoadConfigFromCLI("claim-uuid")
 		slog.Debug("args", "config", config)
-
 		if err := config.Validate(); err != nil {
 			return err
 		}
@@ -42,35 +40,28 @@ Trying to claim a work item that is already failed should return an error, unles
 			return err
 		}
 
-		if item != nil {
-			err = localstate.SaveState(item)
-			if err != nil {
-				slog.Error("could not save state", "error", err)
-				return err
-			}
+		if item == nil {
+			slog.Info("No work items available")
 		}
 
-		// At this point, no work items are available
 		return nil
 	},
 }
 
 func init() {
-	setupFlags()
+	setupClaimFlags()
 	rootCmd.AddCommand(claimCmd)
 }
 
-func setupFlags() {
+func setupClaimFlags() {
 	claimCmd.Flags().BoolP("force", "f", false, "Force re-claiming of a failed work item")
-	err := viper.BindPFlag("force", claimCmd.Flags().Lookup("force"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
+	if err := viper.BindPFlag("force", claimCmd.Flags().Lookup("force")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	claimCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	err = viper.BindPFlag("claim-uuid", claimCmd.Flags().Lookup("uuid"))
-	if err != nil {
-		slog.Error("could not bind flag", "error", err)
+	if err := viper.BindPFlag("claim-uuid", claimCmd.Flags().Lookup("uuid")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
 	}
 }
 
@@ -90,8 +81,6 @@ func claimWorkItem(r *resty.Client, uuidStr string, force bool) (*store.WorkItem
 		slog.Error("could not claim work item", "error", err)
 		return nil, err
 	}
-
-	slog.Info("work item claimed", "uuid", item.UUID)
 
 	return item, nil
 }

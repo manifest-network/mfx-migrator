@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/liftedinit/mfx-migrator/internal/localstate"
+	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
 // verifyCmd represents the verify command
@@ -22,7 +22,7 @@ var verifyCmd = &cobra.Command{
 			return errors.New("uuid is required")
 		}
 
-		s, err := localstate.LoadState(uuidStr)
+		s, err := store.LoadState(uuidStr)
 		if err != nil {
 			slog.Warn("unable to load local state, continuing", "error", err)
 		}

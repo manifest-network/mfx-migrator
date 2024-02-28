@@ -80,6 +80,7 @@ func setupMockResponder(t *testing.T, method, url, filePath string, code int) {
 }
 
 func TestStore_Claim(t *testing.T) {
+	setup(t) // TODO: Move this to a test suite setup function
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -106,7 +107,7 @@ func TestStore_Claim(t *testing.T) {
 			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
 		}, func() {
 			item, err := store.ClaimWorkItemFromQueue(rClient)
-			require.NoError(t, err)
+			require.Error(t, err) // unable to claim the work item
 			require.Nil(t, item)
 		}},
 		{"success_uuid", []Endpoint{
@@ -164,8 +165,9 @@ func TestStore_Claim(t *testing.T) {
 			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
 			{"PUT", "=~^" + migrationUrl, "", http.StatusNotFound},
 		}, func() {
-			_, err := store.ClaimWorkItemFromQueue(rClient)
+			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to claim the work item
+			require.Nil(t, item)
 		}},
 	}
 

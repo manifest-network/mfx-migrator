@@ -1,4 +1,4 @@
-package localstate
+package store
 
 import (
 	"encoding/json"
@@ -6,11 +6,9 @@ import (
 	"io"
 	"log/slog"
 	"os"
-
-	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
-func SaveState(item *store.WorkItem) error {
+func SaveState(item *WorkItem) error {
 	slog.Debug("saving state", "item", item)
 
 	// Convert the WorkItem to JSON
@@ -35,7 +33,7 @@ func SaveState(item *store.WorkItem) error {
 	return nil
 }
 
-func LoadState(uuid string) (*store.WorkItem, error) {
+func LoadState(uuid string) (*WorkItem, error) {
 	slog.Debug("loading state", "uuid", uuid)
 
 	// Open the file with the UUID as the filename
@@ -52,7 +50,7 @@ func LoadState(uuid string) (*store.WorkItem, error) {
 	}
 
 	// Convert the JSON data to a WorkItem
-	var item store.WorkItem
+	var item WorkItem
 	err = json.Unmarshal(data, &item)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal work item: %w", err)
