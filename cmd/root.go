@@ -18,15 +18,6 @@ var rootCmd = &cobra.Command{
 	Use:               "mfx-migrator",
 	Short:             "Migrate your MFX tokens to the Manifest Ledger",
 	PersistentPreRunE: RootCmdPersistentPreRunE,
-	PreRunE:           RootCmdPreRunE,
-}
-
-func RootCmdPreRunE(cmd *cobra.Command, args []string) error {
-	urlString := viper.GetString("url")
-	if err := validateURL(urlString); err != nil {
-		return err
-	}
-	return nil
 }
 
 func RootCmdPersistentPreRunE(cmd *cobra.Command, args []string) error {
@@ -35,9 +26,9 @@ func RootCmdPersistentPreRunE(cmd *cobra.Command, args []string) error {
 	if err := setLogLevel(logLevelArg); err != nil {
 		return err
 	}
-	//if err := validateURL(urlString); err != nil {
-	//	return err
-	//}
+	if err := validateURL(urlString); err != nil {
+		return err
+	}
 
 	slog.Debug("Application initialized", "logLevel", logLevelArg, "url", urlString)
 

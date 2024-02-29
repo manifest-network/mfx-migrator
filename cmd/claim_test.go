@@ -27,7 +27,7 @@ func TestClaimCmd(t *testing.T) {
 		out       string
 		endpoints []testutils.Endpoint
 	}{
-		{name: "no arg", args: []string{}, err: errors.New("required flag(s) \"neighborhood\", \"password\", \"url\", \"username\" not set")},
+		{name: "no arg", args: []string{}, err: errors.New("URL cannot be empty")},
 		{name: "url arg only", args: []string{"--url", testutils.RootUrl}, err: errors.New("required flag(s) \"neighborhood\", \"password\", \"username\" not set")},
 		{name: "url and username", args: []string{"--url", testutils.RootUrl, "--username", "user"}, err: errors.New("required flag(s) \"neighborhood\", \"password\" not set")},
 		{name: "url, username and password", args: []string{"--url", testutils.RootUrl, "--username", "user", "--password", "pass"}, err: errors.New("required flag(s) \"neighborhood\" not set")},
