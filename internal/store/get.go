@@ -9,9 +9,9 @@ import (
 )
 
 // GetWorkItem retrieves a work item from the remote database by UUID.
-func GetWorkItem(r *resty.Client, uuid uuid.UUID) (*WorkItem, error) {
+func GetWorkItem(r *resty.Client, itemUUID uuid.UUID) (*WorkItem, error) {
 	req := r.R().
-		SetPathParam("uuid", uuid.String()).
+		SetPathParam("uuid", itemUUID.String()).
 		SetResult(&WorkItem{})
 	response, err := req.Get("neighborhoods/{neighborhood}/migrations/{uuid}")
 	if err != nil {
@@ -20,7 +20,7 @@ func GetWorkItem(r *resty.Client, uuid uuid.UUID) (*WorkItem, error) {
 	}
 
 	item := response.Result().(*WorkItem)
-	if item == nil {
+	if item == nil || (item != nil && item.IsNil()) {
 		slog.Error("error unmarshalling work item")
 		return nil, errors.New("error unmarshalling work item")
 	}
@@ -38,7 +38,7 @@ func GetAllWorkItems(r *resty.Client) (*WorkItems, error) {
 	}
 
 	items := response.Result().(*WorkItems)
-	if items == nil {
+	if items == nil || (items != nil && items.IsNil()) {
 		slog.Error("error unmarshalling work items")
 		return nil, errors.New("error unmarshalling work items")
 	}

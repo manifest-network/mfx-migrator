@@ -2,13 +2,14 @@ package store_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
-func TestStore_WorkItemStatus(t *testing.T) {
+func TestTypes_WorkItemStatus(t *testing.T) {
 	tests := []struct {
 		desc string
 		s    store.WorkItemStatus
@@ -27,4 +28,18 @@ func TestStore_WorkItemStatus(t *testing.T) {
 			require.Equal(t, tt.i, tt.s.EnumIndex())
 		})
 	}
+}
+
+func TestTypes_WorkItem(t *testing.T) {
+	now := time.Now()
+	hash := "foobar"
+	wi := store.WorkItem{
+		Status:           store.CREATED,
+		ManifestAddress:  "foo",
+		ManifestHash:     &hash,
+		ManifestDatetime: &now,
+	}
+
+	require.True(t, wi.Equal(wi))
+	require.False(t, wi.Equal(store.WorkItem{}))
 }

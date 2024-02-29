@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -11,12 +12,24 @@ import (
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
+const RestyClientKey store.ContextKey = "restyClient"
+
 // CreateRestClient creates a new resty client with the parsed URL and the claim config
-func CreateRestClient(url string, neighborhood uint64) *resty.Client {
+func CreateRestClient(ctx context.Context, url string, neighborhood uint64) *resty.Client {
 	slog.Info("Creating REST client...")
+
+	// If a resty client is already in the context, use it. Otherwise, create a new one.
+	// This allows the resty client to be injected for testing purposes.
+	// TODO: Is there a better way to do this?
+	var client *resty.Client
+	if ctxClient := ctx.Value(RestyClientKey); ctxClient != nil {
+		client = ctxClient.(*resty.Client)
+	} else {
+		client = resty.New()
+	}
 	// Retry the claim process 3 times with a 5 seconds wait time between retries and a maximum wait time of 60 seconds.
 	// Retry uses an exponential backoff algorithm.
-	return resty.New().
+	return client.
 		SetBaseURL(url).
 		SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
 		SetRetryCount(3).

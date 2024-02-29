@@ -14,42 +14,34 @@ import (
 	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
-// Design notes:
-// - The `claim` command should be used to claim a work item. If no work items are available, the command should exit
-// - The `verify` command should be used to verify the status of a migration of MFX tokens to the Manifest Ledger
-// - The `migrate` command should be used to execute a migration of MFX tokens to the Manifest Ledger
-// - The `*.uuid` files should be used to persist the state of a migration locally. This file should be removed once the migration is complete
-//
-// 0. Check if any `*.uuid` files exist in the current directory. If so, resume the migration
-// 1. Claim a work item. Exit if no work items are available
-//   1.1. If the work item is claimed successfully, the `*.uuid` file should be created.
-//  	  Migration state should be persisted to this file.
-//   1.2. If the work item is not claimed successfully, try the next work item
-// 2. Verify the work item is valid
-// 3. Execute the migration
-// 4. Verify the migration was successful
-// 5. POST the 'talib/complete-work/' endpoint to complete the work item
-//   5.1. If the work item is completed, the `*.uuid` file should be removed
-//        Note: Completed involves both successful and failed migrations.
-//              Failed migrations should have a reason for failure persisted to the database.
-
 var rootCmd = &cobra.Command{
-	Use:   "mfx-migrator",
-	Short: "Migrate your MFX tokens to the Manifest Ledger",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		logLevelArg := viper.GetString("logLevel")
-		urlString := viper.GetString("url")
-		if err := setLogLevel(logLevelArg); err != nil {
-			return err
-		}
-		if err := validateURL(urlString); err != nil {
-			return err
-		}
+	Use:               "mfx-migrator",
+	Short:             "Migrate your MFX tokens to the Manifest Ledger",
+	PersistentPreRunE: RootCmdPersistentPreRunE,
+	PreRunE:           RootCmdPreRunE,
+}
 
-		slog.Debug("Application initialized", "logLevel", logLevelArg, "url", urlString)
+func RootCmdPreRunE(cmd *cobra.Command, args []string) error {
+	urlString := viper.GetString("url")
+	if err := validateURL(urlString); err != nil {
+		return err
+	}
+	return nil
+}
 
-		return nil
-	},
+func RootCmdPersistentPreRunE(cmd *cobra.Command, args []string) error {
+	logLevelArg := viper.GetString("logLevel")
+	urlString := viper.GetString("url")
+	if err := setLogLevel(logLevelArg); err != nil {
+		return err
+	}
+	//if err := validateURL(urlString); err != nil {
+	//	return err
+	//}
+
+	slog.Debug("Application initialized", "logLevel", logLevelArg, "url", urlString)
+
+	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -76,31 +68,47 @@ var (
 	validLogLevelsStr = strings.Join(utils.GetKeys(validLogLevels), "|")
 )
 
+func SetupRootCmdFlags(command *cobra.Command) {
+	command.PersistentFlags().StringP("logLevel", "l", "info", fmt.Sprintf("set log level (%s)", validLogLevelsStr))
+	if err := viper.BindPFlag("logLevel", command.PersistentFlags().Lookup("logLevel")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+
+	command.PersistentFlags().String("url", "", "Root URL of the API server")
+	if err := command.MarkPersistentFlagRequired("url"); err != nil {
+		slog.Error(ErrorMarkingFlagRequired, "error", err)
+	}
+	if err := viper.BindPFlag("url", command.PersistentFlags().Lookup("url")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+
+	command.PersistentFlags().Uint64("neighborhood", 0, "Neighborhood ID")
+	if err := command.MarkPersistentFlagRequired("neighborhood"); err != nil {
+		slog.Error(ErrorMarkingFlagRequired, "error", err)
+	}
+	if err := viper.BindPFlag("neighborhood", command.PersistentFlags().Lookup("neighborhood")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+
+	command.PersistentFlags().String("username", "", "Username for the remote database")
+	if err := command.MarkPersistentFlagRequired("username"); err != nil {
+		slog.Error(ErrorMarkingFlagRequired, "error", err)
+	}
+	if err := viper.BindPFlag("username", command.PersistentFlags().Lookup("username")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+
+	command.PersistentFlags().String("password", "", "Password for the remote database")
+	if err := command.MarkPersistentFlagRequired("password"); err != nil {
+		slog.Error(ErrorMarkingFlagRequired, "error", err)
+	}
+	if err := viper.BindPFlag("password", command.PersistentFlags().Lookup("password")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+}
+
 func init() {
-	rootCmd.PersistentFlags().StringP("logLevel", "l", "info", fmt.Sprintf("set log level (%s)", validLogLevelsStr))
-	if err := viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-
-	rootCmd.PersistentFlags().StringP("url", "u", "", "Root URL of the API server")
-	if err := viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-
-	rootCmd.PersistentFlags().Uint64("neighbourhood", 2, "Neighbourhood ID")
-	if err := viper.BindPFlag("neighbourhood", rootCmd.PersistentFlags().Lookup("neighbourhood")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-
-	rootCmd.PersistentFlags().String("username", "", "Username for the remote database")
-	if err := viper.BindPFlag("username", rootCmd.PersistentFlags().Lookup("username")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-
-	rootCmd.PersistentFlags().String("password", "", "Password for the remote database")
-	if err := viper.BindPFlag("password", rootCmd.PersistentFlags().Lookup("password")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
+	SetupRootCmdFlags(rootCmd)
 
 	viper.AddConfigPath("./")
 	viper.SetConfigName("config")

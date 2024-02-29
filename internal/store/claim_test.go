@@ -1,9 +1,6 @@
 package store_test
 
 import (
-	"embed"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -15,104 +12,59 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/liftedinit/mfx-migrator/testutils"
+
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
-const (
-	uuidv4Regex  = "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}"
-	rootUrl      = "http://fakeurl:3001/api/v1/"
-	neighborhood = "1"
-)
-
-var (
-	migrationsUrl = rootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", neighborhood)
-	migrationUrl  = migrationsUrl + uuidv4Regex
-)
-
-//go:embed testdata/work-items.json
-//go:embed testdata/work-item.json
-//go:embed testdata/work-item-update-success.json
-//go:embed testdata/work-item-update-failure.json
-//go:embed testdata/work-item-update-force.json
-//go:embed testdata/work-item-force.json
-var mockData embed.FS
-
-type Endpoint struct {
-	method string
-	url    string
-	data   string
-	code   int
-}
 type testCase struct {
 	desc      string
-	endpoints []Endpoint
+	endpoints []testutils.Endpoint
 	check     func()
 }
 
-// createJsonResponderFromFile creates a new JSON responder from a file.
-func createJsonResponderFromFile(filePath string, code int) (httpmock.Responder, error) {
-	inputData, err := mockData.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var jsonData interface{}
-	if err = json.Unmarshal(inputData, &jsonData); err != nil {
-		return nil, err
-	}
-
-	return httpmock.NewJsonResponder(code, jsonData)
-}
-
-// setupMockResponder sets up a mock responder for a given method and URL.
-func setupMockResponder(t *testing.T, method, url, filePath string, code int) {
-	var responder httpmock.Responder
-	var err error
-	if filePath != "" {
-		responder, err = createJsonResponderFromFile(filePath, code)
-		require.NoError(t, err)
-	} else {
-		responder = httpmock.NewErrorResponder(fmt.Errorf("not found"))
-	}
-
-	slog.Info("Setting up mock responder", "method", method, "url", url, "code", code)
-	httpmock.RegisterResponder(method, url, responder)
-}
-
 func TestStore_Claim(t *testing.T) {
-	setup(t) // TODO: Move this to a test suite setup function
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(logger)
+	tempdir := testutils.SetupTmpDir(t)
+	defer os.RemoveAll(tempdir)
 
-	testUrl, _ := url.Parse(rootUrl)
-	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", neighborhood)
+	testUrl, _ := url.Parse(testutils.RootUrl)
+	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", testutils.Neighborhood)
 	httpmock.ActivateNonDefault(rClient.GetClient())
 
 	var tests = []testCase{
-		{"success_queue", []Endpoint{
-			{"GET", migrationsUrl, "testdata/work-items.json", http.StatusOK},
-			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-success.json", http.StatusOK},
+		// Successfully claim a work item from the queue
+		{"success_queue", []testutils.Endpoint{
+			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-success.json", Code: http.StatusOK},
 		}, func() {
 			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.NotEqual(t, uuid.Nil, item.UUID)
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},
-		{"failure_queue", []Endpoint{
-			{"GET", migrationsUrl, "testdata/work-items.json", http.StatusOK},
-			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
+		// Fail to claim a work item from the queue (work item update failure)
+		{"failure_queue", []testutils.Endpoint{
+			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-failure.json", Code: http.StatusOK},
 		}, func() {
 			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to claim the work item
 			require.Nil(t, item)
 		}},
-		{"success_uuid", []Endpoint{
-			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-success.json", http.StatusOK},
+		// No work items available in the queue
+		{"no_item_queue", []testutils.Endpoint{
+			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/no-work-items-available.json", Code: http.StatusOK},
+		}, func() {
+			item, err := store.ClaimWorkItemFromQueue(rClient)
+			require.NoError(t, err) // no work items available
+			require.Nil(t, item)
+		}},
+		// Successfully claim a work item by UUID
+		{"success_uuid", []testutils.Endpoint{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-success.json", Code: http.StatusOK},
 		}, func() {
 			myUUID := uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f")
 			item, err := store.ClaimWorkItemFromUUID(rClient, myUUID, false)
@@ -120,25 +72,28 @@ func TestStore_Claim(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},
-		{"failure_uuid", []Endpoint{
-			{"GET", migrationsUrl, "testdata/work-items.json", http.StatusOK},
-			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
+		// Fail to claim a work item by UUID (work item update failure)
+		{"failure_uuid", []testutils.Endpoint{
+			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-failure.json", Code: http.StatusOK},
 		}, func() {
 			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
 			require.Error(t, err) // unable to claim the work item
 			require.Nil(t, item)
 		}},
-		{"failure_uuid_not_found", []Endpoint{
-			{"GET", "=~^" + migrationUrl, "", http.StatusNotFound},
+		// Fail to claim a work item by UUID (work item UUID not found)
+		{"failure_uuid_not_found", []testutils.Endpoint{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Code: http.StatusNotFound},
 		}, func() {
 			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.New(), false)
 			require.Error(t, err) // work item not found
 			require.Nil(t, item)
 		}},
-		{"force_uuid_succeed", []Endpoint{
-			{"GET", "=~^" + migrationUrl, "testdata/work-item-force.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-force.json", http.StatusOK},
+		// Successfully claim a work item by UUID (forced claim, work item already claimed)
+		{"force_uuid_succeed", []testutils.Endpoint{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-force.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-force.json", Code: http.StatusOK},
 		}, func() {
 			myUUID := uuid.MustParse("c726e305-089a-4a50-b6b6-c707d45221f2")
 			item, err := store.ClaimWorkItemFromUUID(rClient, myUUID, true)
@@ -146,24 +101,44 @@ func TestStore_Claim(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},
-		{"force_uuid_fail", []Endpoint{
-			{"GET", "=~^" + migrationUrl, "testdata/work-item-force.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "testdata/work-item-update-failure.json", http.StatusOK},
+		// Fail to claim a work item by UUID (forced claim, work item update failure)
+		{"force_uuid_fail", []testutils.Endpoint{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-force.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-failure.json", Code: http.StatusOK},
 		}, func() {
 			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), false)
 			require.Error(t, err) // work item not in the correct state to be claimed and force is false
 			require.Nil(t, item)
 		}},
-		{"invalid_all_work_items_url", []Endpoint{
-			{"GET", migrationsUrl, "", http.StatusNotFound},
+		// Fail to claim a work item by UUID (response is not a work item)
+		{"invalid_work_item", []testutils.Endpoint{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/garbage.json", Code: http.StatusOK},
+		}, func() {
+			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.New(), false)
+			slog.Info("item", "item", item)
+			require.Error(t, err) // work item is invalid
+			require.Nil(t, item)
+		}},
+		// Fail to claim a work item from the queue (work item list is invalid)
+		{"invalid_work_items", []testutils.Endpoint{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/garbage.json", Code: http.StatusOK},
+		}, func() {
+			item, err := store.ClaimWorkItemFromQueue(rClient)
+			require.Error(t, err) // unable to list work items
+			require.Nil(t, item)
+		}},
+		// Fail to claim a work item from the queue (invalid work item list URL)
+		{"invalid_all_work_items_url", []testutils.Endpoint{
+			{Method: "GET", Url: testutils.MigrationsUrl, Code: http.StatusNotFound},
 		}, func() {
 			_, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to list work items
 		}},
-		{"invalid_update_work_item_url", []Endpoint{
-			{"GET", migrationsUrl, "testdata/work-items.json", http.StatusOK},
-			{"GET", "=~^" + migrationUrl, "testdata/work-item.json", http.StatusOK},
-			{"PUT", "=~^" + migrationUrl, "", http.StatusNotFound},
+		// Fail to claim a work item from the queue (invalid work item update URL)
+		{"invalid_update_work_item_url", []testutils.Endpoint{
+			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Code: http.StatusNotFound},
 		}, func() {
 			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to claim the work item
@@ -174,7 +149,7 @@ func TestStore_Claim(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			for _, endpoint := range tt.endpoints {
-				setupMockResponder(t, endpoint.method, endpoint.url, endpoint.data, endpoint.code)
+				testutils.SetupMockResponder(t, endpoint.Method, endpoint.Url, endpoint.Data, endpoint.Code)
 			}
 
 			tt.check()

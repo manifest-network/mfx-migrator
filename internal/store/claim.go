@@ -9,6 +9,7 @@ import (
 )
 
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
+// TODO: Support claiming multiple work items at once
 func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
 	// 1. Get all work items from remote
 	items, err := GetAllWorkItems(r)

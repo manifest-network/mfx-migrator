@@ -23,44 +23,46 @@ Claimed work items should be marked as 'claimed'' in the database.
 Trying to claim a work item that is already claimed should return an error.
 Trying to claim a work item that is already completed should return an error.
 Trying to claim a work item that is already failed should return an error, unless the '-f' flag is set.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		config := LoadConfigFromCLI("claim-uuid")
-		slog.Debug("args", "config", config)
-		if err := config.Validate(); err != nil {
-			return err
-		}
+	RunE: ClaimCmdRunE,
+}
 
-		r := CreateRestClient(config.Url, config.Neighborhood)
-		if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
-			return err
-		}
+func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
+	config := LoadConfigFromCLI("claim-uuid")
+	slog.Debug("args", "config", config)
+	if err := config.Validate(); err != nil {
+		return err
+	}
 
-		item, err := claimWorkItem(r, config.UUID, config.Force)
-		if err != nil {
-			return err
-		}
+	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
+	if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
+		return err
+	}
 
-		if item == nil {
-			slog.Info("No work items available")
-		}
+	item, err := claimWorkItem(r, config.UUID, config.Force)
+	if err != nil {
+		return err
+	}
 
-		return nil
-	},
+	if item == nil {
+		slog.Info("No work items available")
+	}
+
+	return nil
 }
 
 func init() {
-	setupClaimFlags()
+	SetupClaimCmdFlags(claimCmd)
 	rootCmd.AddCommand(claimCmd)
 }
 
-func setupClaimFlags() {
-	claimCmd.Flags().BoolP("force", "f", false, "Force re-claiming of a failed work item")
-	if err := viper.BindPFlag("force", claimCmd.Flags().Lookup("force")); err != nil {
+func SetupClaimCmdFlags(command *cobra.Command) {
+	command.Flags().BoolP("force", "f", false, "Force re-claiming of a failed work item")
+	if err := viper.BindPFlag("force", command.Flags().Lookup("force")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
-	claimCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	if err := viper.BindPFlag("claim-uuid", claimCmd.Flags().Lookup("uuid")); err != nil {
+	command.Flags().String("uuid", "", "UUID of the work item to claim")
+	if err := viper.BindPFlag("claim-uuid", command.Flags().Lookup("uuid")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 }

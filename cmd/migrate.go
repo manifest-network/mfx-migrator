@@ -36,7 +36,7 @@ var migrateCmd = &cobra.Command{
 			return err
 		}
 
-		r := CreateRestClient(config.Url, config.Neighborhood)
+		r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
 		if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
 			return err
 		}
@@ -68,6 +68,7 @@ func compareItems(item *store.WorkItem, remoteItem *store.WorkItem) error {
 	return nil
 }
 
+// TODO: Support migrating multiple work items at once
 func setupMigrateFlags() {
 	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
 	if err := migrateCmd.MarkFlagRequired("uuid"); err != nil {

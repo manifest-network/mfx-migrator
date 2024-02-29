@@ -54,6 +54,11 @@ func (wi WorkItem) Equal(other WorkItem) bool {
 		utils.EqualStringPtr(wi.Error, other.Error)
 }
 
+// IsNil returns true if the WorkItem is nil
+func (wi WorkItem) IsNil() bool {
+	return wi.UUID == uuid.Nil
+}
+
 type WorkItemUpdateRequest struct {
 	Status           WorkItemStatus `json:"status"`
 	ManifestDatetime *time.Time     `json:"manifestDatetime"`
@@ -80,3 +85,10 @@ type WorkItems struct {
 	Items []WorkItem `json:"items"`
 	Meta  Meta       `json:"meta"`
 }
+
+// IsNil returns true if the WorkItems is nil
+func (wi WorkItems) IsNil() bool {
+	return wi.Items == nil
+}
+
+type ContextKey string
