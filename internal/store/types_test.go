@@ -13,7 +13,7 @@ func TestTypes_WorkItemStatus(t *testing.T) {
 	tests := []struct {
 		desc string
 		s    store.WorkItemStatus
-		i    int
+		i    int64
 	}{
 		{"created", store.CREATED, 1},
 		{"claimed", store.CLAIMED, 2},

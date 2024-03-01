@@ -14,6 +14,8 @@ import (
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
+// TODO: Tests
+
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
@@ -22,6 +24,12 @@ var migrateCmd = &cobra.Command{
 		config := LoadConfigFromCLI("migrate-uuid")
 		slog.Debug("args", "config", config)
 		if err := config.Validate(); err != nil {
+			return err
+		}
+
+		migrateConfig := LoadMigrationConfigFromCLI()
+		slog.Debug("args", "migrate-config", migrateConfig)
+		if err := migrateConfig.Validate(); err != nil {
 			return err
 		}
 
@@ -41,7 +49,7 @@ var migrateCmd = &cobra.Command{
 			return err
 		}
 
-		return migrate(r, item)
+		return migrate(r, item, migrateConfig)
 	},
 }
 
@@ -70,6 +78,38 @@ func compareItems(item *store.WorkItem, remoteItem *store.WorkItem) error {
 
 // TODO: Support migrating multiple work items at once
 func setupMigrateFlags() {
+	migrateCmd.Flags().String("chainId", "", "Chain ID of the blockchain to migrate to")
+	if err := viper.BindPFlag("chainId", migrateCmd.Flags().Lookup("chainId")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().String("address-prefix", "", "Address prefix of the blockchain to migrate to")
+	if err := viper.BindPFlag("address-prefix", migrateCmd.Flags().Lookup("address-prefix")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().String("node-address", "", "Node address of the blockchain to migrate to")
+	if err := viper.BindPFlag("node-address", migrateCmd.Flags().Lookup("node-address")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().String("keyring-backend", "", "Keyring backend to use")
+	if err := viper.BindPFlag("keyring-backend", migrateCmd.Flags().Lookup("keyring-backend")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().String("bank-address", "", "Bank address to send tokens from")
+	if err := viper.BindPFlag("bank-address", migrateCmd.Flags().Lookup("bank-address")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().String("chain-home", "", "Root directory of the chain configuration")
+	if err := viper.BindPFlag("chain-home", migrateCmd.Flags().Lookup("chain-home")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().Int64("amount", 0, "Amount of tokens to migrate")
+	if err := viper.BindPFlag("amount", migrateCmd.Flags().Lookup("amount")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+	migrateCmd.Flags().String("denom", "", "Denomination of the tokens to migrate")
+	if err := viper.BindPFlag("denom", migrateCmd.Flags().Lookup("denom")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
 	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
 	if err := migrateCmd.MarkFlagRequired("uuid"); err != nil {
 		slog.Error(ErrorMarkingFlagRequired, "error", err)
@@ -80,7 +120,7 @@ func setupMigrateFlags() {
 }
 
 // migrate migrates a work item to the Manifest Ledger.
-func migrate(r *resty.Client, item *store.WorkItem) error {
+func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error {
 	slog.Info("Migrating work item...", "uuid", item.UUID)
 
 	remoteItem, err := store.GetWorkItem(r, item.UUID)
@@ -108,7 +148,7 @@ func migrate(r *resty.Client, item *store.WorkItem) error {
 	}
 
 	// Send the tokens
-	txHash, blockTime, err := sendTokens(r, &newItem)
+	txHash, blockTime, err := sendTokens(r, &newItem, config)
 	if err != nil {
 		return err
 	}
@@ -169,14 +209,22 @@ func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error 
 }
 
 // sendTokens sends the tokens from the bank account to the user account.
-func sendTokens(r *resty.Client, item *store.WorkItem) (*string, *time.Time, error) {
-	//txResponse, err := chain.Migrate(item.ManifestAddress, 10, "token")
-	txResponse, blockTime, err := chain.Migrate("gc13ar86s8yqpne8gyqez9jvs9uhaa6j0yjqcx02r", 10, "token", item)
+func sendTokens(r *resty.Client, item *store.WorkItem, config MigrateConfig) (*string, *time.Time, error) {
+	txResponse, blockTime, err := chain.Migrate(item, chain.MigrationConfig{
+		ChainID:        config.ChainID,
+		NodeAddress:    config.NodeAddress,
+		KeyringBackend: config.KeyringBackend,
+		ChainHome:      config.ChainHome,
+		AddressPrefix:  config.AddressPrefix,
+		BankAddress:    config.BankAddress,
+		Amount:         config.Amount,
+		Denom:          config.Denom,
+	})
 	if err != nil {
 		slog.Error("error during migration, operator intervention required", "error", err)
 		errStr := err.Error()
-		if err = setAsFailed(r, *item, &errStr); err != nil {
-			return nil, nil, err
+		if fErr := setAsFailed(r, *item, &errStr); fErr != nil {
+			return nil, nil, fErr
 		}
 
 		return nil, nil, err
@@ -187,5 +235,5 @@ func sendTokens(r *resty.Client, item *store.WorkItem) (*string, *time.Time, err
 		return nil, nil, fmt.Errorf("migration failed: %s", txResponse.RawLog)
 	}
 
-	return &txResponse.TxHash, &blockTime, nil
+	return &txResponse.TxHash, blockTime, nil
 }

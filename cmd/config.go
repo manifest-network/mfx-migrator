@@ -71,3 +71,63 @@ func LoadConfigFromCLI(uuidKey string) Config {
 		Neighborhood: viper.GetUint64("neighborhood"),
 	}
 }
+
+type MigrateConfig struct {
+	ChainID        string
+	AddressPrefix  string
+	NodeAddress    string
+	KeyringBackend string
+	BankAddress    string
+	ChainHome      string
+	Amount         int64
+	Denom          string
+}
+
+func LoadMigrationConfigFromCLI() MigrateConfig {
+	return MigrateConfig{
+		ChainID:        viper.GetString("chainId"),
+		AddressPrefix:  viper.GetString("address-prefix"),
+		NodeAddress:    viper.GetString("node-address"),
+		KeyringBackend: viper.GetString("keyring-backend"),
+		BankAddress:    viper.GetString("bank-address"),
+		ChainHome:      viper.GetString("chain-home"),
+		Amount:         viper.GetInt64("amount"),
+		Denom:          viper.GetString("denom"),
+	}
+}
+
+func (c MigrateConfig) Validate() error {
+	if c.ChainID == "" {
+		return errors.New("chain ID is required")
+	}
+
+	if c.AddressPrefix == "" {
+		return errors.New("address prefix is required")
+	}
+
+	if c.NodeAddress == "" {
+		return errors.New("node address is required")
+	}
+
+	if c.KeyringBackend == "" {
+		return errors.New("keyring backend is required")
+	}
+
+	if c.BankAddress == "" {
+		return errors.New("bank address is required")
+	}
+
+	if c.ChainHome == "" {
+		return errors.New("chain home is required")
+	}
+
+	if c.Amount == 0 {
+		return errors.New("amount is required")
+	}
+
+	if c.Denom == "" {
+		return errors.New("denom is required")
+	}
+
+	return nil
+}

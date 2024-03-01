@@ -27,8 +27,8 @@ func (s WorkItemStatus) String() string {
 }
 
 // EnumIndex returns the enum index of a LocalWorkItemStatus.
-func (s WorkItemStatus) EnumIndex() int {
-	return int(s)
+func (s WorkItemStatus) EnumIndex() int64 {
+	return int64(s)
 }
 
 type WorkItem struct {

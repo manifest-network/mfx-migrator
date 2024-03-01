@@ -12,7 +12,8 @@ import (
 // TODO: Support claiming multiple work items at once
 func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
 	// 1. Get all work items from remote
-	items, err := GetAllWorkItems(r)
+	status := CREATED
+	items, err := GetAllWorkItems(r, &status)
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
 		return nil, err

@@ -2,6 +2,7 @@ package store
 
 import (
 	"log/slog"
+	"strconv"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
@@ -29,8 +30,11 @@ func GetWorkItem(r *resty.Client, itemUUID uuid.UUID) (*WorkItem, error) {
 }
 
 // GetAllWorkItems retrieves all work items from the remote database.
-func GetAllWorkItems(r *resty.Client) (*WorkItems, error) {
+func GetAllWorkItems(r *resty.Client, status *WorkItemStatus) (*WorkItems, error) {
 	req := r.R().SetResult(&WorkItems{})
+	if status != nil {
+		req.SetQueryParam("status", strconv.FormatInt(status.EnumIndex(), 10))
+	}
 	response, err := req.Get("neighborhoods/{neighborhood}/migrations/")
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
