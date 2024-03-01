@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/spf13/cobra"
@@ -108,21 +108,14 @@ func migrate(r *resty.Client, item *store.WorkItem) error {
 	}
 
 	// Send the tokens
-	txHash, height, err := sendTokens(r, &newItem)
+	txHash, blockTime, err := sendTokens(r, &newItem)
 	if err != nil {
 		return err
 	}
 
-	slog.Info("Migration succeeded on chain...", "hash", txHash, "height", height)
+	slog.Info("Migration succeeded on chain...", "hash", txHash, "timestamp", blockTime)
 	// Set the status to COMPLETED
-	if err = setAsCompleted(r, newItem, txHash); err != nil {
-		return err
-	}
-
-	// Set the migration datetime from the block time
-	// The timestamp is not available in the response, so we need to make another request to get the block time
-	// See https://github.com/ignite/cli/blob/f3ab0d709ec41e31a1c57f2fe86c8902d8a50497/ignite/pkg/cosmosclient/txservice.go#L63-L65
-	if err = updateBlockTime(r, newItem, *height); err != nil {
+	if err = setAsCompleted(r, newItem, txHash, blockTime); err != nil {
 		return err
 	}
 
@@ -156,9 +149,10 @@ func setAsMigrating(r *resty.Client, newItem store.WorkItem) error {
 
 // setAsCompleted sets the status of the work item to COMPLETED.
 // It also sets the manifest hash and updates the state.
-func setAsCompleted(r *resty.Client, newItem store.WorkItem, txHash *string) error {
+func setAsCompleted(r *resty.Client, newItem store.WorkItem, txHash *string, blockTime *time.Time) error {
 	newItem.Status = store.COMPLETED
 	newItem.ManifestHash = txHash
+	newItem.ManifestDatetime = blockTime
 	if err := store.UpdateWorkItemAndSaveState(r, newItem); err != nil {
 		return err
 	}
@@ -174,32 +168,10 @@ func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error 
 	return nil
 }
 
-// updateBlockTime updates the block time of the work item and updates the state.
-func updateBlockTime(r *resty.Client, newItem store.WorkItem, height int64) error {
-	slog.Info("Getting block time...", "height", height)
-	blockTime, err := chain.GetBlockTime(height)
-	if err != nil {
-		slog.Error("could not get block time", "error", err)
-		return err
-	}
-
-	if blockTime == nil {
-		slog.Error("block time is nil")
-		return errors.New("block time is nil")
-	}
-
-	newItem.ManifestDatetime = blockTime
-	if err = store.UpdateWorkItemAndSaveState(r, newItem); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // sendTokens sends the tokens from the bank account to the user account.
-func sendTokens(r *resty.Client, item *store.WorkItem) (*string, *int64, error) {
-	txResponse, err := chain.Migrate(item.ManifestAddress, 10, "token")
-	//txResponse, err := chain.Migrate("gc13ar86s8yqpne8gyqez9jvs9uhaa6j0yjqcx02r", 10, "token")
+func sendTokens(r *resty.Client, item *store.WorkItem) (*string, *time.Time, error) {
+	//txResponse, err := chain.Migrate(item.ManifestAddress, 10, "token")
+	txResponse, blockTime, err := chain.Migrate("gc13ar86s8yqpne8gyqez9jvs9uhaa6j0yjqcx02r", 10, "token", item)
 	if err != nil {
 		slog.Error("error during migration, operator intervention required", "error", err)
 		errStr := err.Error()
@@ -215,5 +187,5 @@ func sendTokens(r *resty.Client, item *store.WorkItem) (*string, *int64, error) 
 		return nil, nil, fmt.Errorf("migration failed: %s", txResponse.RawLog)
 	}
 
-	return &txResponse.TxHash, &txResponse.Height, nil
+	return &txResponse.TxHash, &blockTime, nil
 }

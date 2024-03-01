@@ -17,6 +17,9 @@ const (
 )
 
 var (
+	DefaultMigrationsUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", "0")
+	DefaultMigrationUrl  = DefaultMigrationsUrl + Uuidv4Regex
+
 	MigrationsUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", Neighborhood)
 	MigrationUrl  = MigrationsUrl + Uuidv4Regex
 	LoginUrl      = RootUrl + "auth/login"

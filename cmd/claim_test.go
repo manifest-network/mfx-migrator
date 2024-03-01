@@ -28,9 +28,15 @@ func TestClaimCmd(t *testing.T) {
 		endpoints []testutils.Endpoint
 	}{
 		{name: "no arg", args: []string{}, err: errors.New("URL cannot be empty")},
-		{name: "url arg only", args: []string{"--url", testutils.RootUrl}, err: errors.New("required flag(s) \"neighborhood\", \"password\", \"username\" not set")},
-		{name: "url and username", args: []string{"--url", testutils.RootUrl, "--username", "user"}, err: errors.New("required flag(s) \"neighborhood\", \"password\" not set")},
-		{name: "url, username and password", args: []string{"--url", testutils.RootUrl, "--username", "user", "--password", "pass"}, err: errors.New("required flag(s) \"neighborhood\" not set")},
+		{name: "url arg only", args: []string{"--url", testutils.RootUrl}, err: errors.New("username is required")},
+		{name: "url and username", args: []string{"--url", testutils.RootUrl, "--username", "user"}, err: errors.New("password is required")},
+		// The default neighborhood value is 0
+		{name: "url, username and password", args: []string{"--url", testutils.RootUrl, "--username", "user", "--password", "pass"}, endpoints: []testutils.Endpoint{
+			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
+			{Method: "GET", Url: testutils.DefaultMigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item-update-success.json", Code: http.StatusOK},
+		}},
 		{name: "url, username, password and neighborhood", args: []string{"--url", testutils.RootUrl, "--username", "user", "--password", "pass", "--neighborhood", "1"}, endpoints: []testutils.Endpoint{
 			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
 			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},

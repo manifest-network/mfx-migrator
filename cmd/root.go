@@ -66,33 +66,21 @@ func SetupRootCmdFlags(command *cobra.Command) {
 	}
 
 	command.PersistentFlags().String("url", "", "Root URL of the API server")
-	if err := command.MarkPersistentFlagRequired("url"); err != nil {
-		slog.Error(ErrorMarkingFlagRequired, "error", err)
-	}
 	if err := viper.BindPFlag("url", command.PersistentFlags().Lookup("url")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	command.PersistentFlags().Uint64("neighborhood", 0, "Neighborhood ID")
-	if err := command.MarkPersistentFlagRequired("neighborhood"); err != nil {
-		slog.Error(ErrorMarkingFlagRequired, "error", err)
-	}
 	if err := viper.BindPFlag("neighborhood", command.PersistentFlags().Lookup("neighborhood")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	command.PersistentFlags().String("username", "", "Username for the remote database")
-	if err := command.MarkPersistentFlagRequired("username"); err != nil {
-		slog.Error(ErrorMarkingFlagRequired, "error", err)
-	}
 	if err := viper.BindPFlag("username", command.PersistentFlags().Lookup("username")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
 	command.PersistentFlags().String("password", "", "Password for the remote database")
-	if err := command.MarkPersistentFlagRequired("password"); err != nil {
-		slog.Error(ErrorMarkingFlagRequired, "error", err)
-	}
 	if err := viper.BindPFlag("password", command.PersistentFlags().Lookup("password")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}

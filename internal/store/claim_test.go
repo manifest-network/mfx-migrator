@@ -121,7 +121,7 @@ func TestStore_Claim(t *testing.T) {
 		}},
 		// Fail to claim a work item from the queue (work item list is invalid)
 		{"invalid_work_items", []testutils.Endpoint{
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/garbage.json", Code: http.StatusOK},
+			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/garbage.json", Code: http.StatusOK},
 		}, func() {
 			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.Error(t, err) // unable to list work items
