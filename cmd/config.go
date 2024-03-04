@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
+
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 // Config represents the configuration for the command
@@ -73,17 +75,20 @@ func LoadConfigFromCLI(uuidKey string) Config {
 }
 
 type MigrateConfig struct {
-	ChainID        string
-	AddressPrefix  string
-	NodeAddress    string
-	KeyringBackend string
-	BankAddress    string
-	ChainHome      string
-	Amount         int64
-	Denom          string
+	ChainID        string                     // The destination chain ID
+	AddressPrefix  string                     // The destination address prefix
+	NodeAddress    string                     // The destination RPC node address
+	KeyringBackend string                     // The destination chain keyring backend to use
+	BankAddress    string                     // The destination chain address of the bank account to send tokens from
+	ChainHome      string                     // The root directory of the destination chain configuration
+	TokenMap       map[string]utils.TokenInfo // Map of source token address to destination token info
 }
 
 func LoadMigrationConfigFromCLI() MigrateConfig {
+	var tokenMap map[string]utils.TokenInfo
+	if err := viper.UnmarshalKey("token-map", &tokenMap); err != nil {
+		panic(err)
+	}
 	return MigrateConfig{
 		ChainID:        viper.GetString("chainId"),
 		AddressPrefix:  viper.GetString("address-prefix"),
@@ -91,8 +96,7 @@ func LoadMigrationConfigFromCLI() MigrateConfig {
 		KeyringBackend: viper.GetString("keyring-backend"),
 		BankAddress:    viper.GetString("bank-address"),
 		ChainHome:      viper.GetString("chain-home"),
-		Amount:         viper.GetInt64("amount"),
-		Denom:          viper.GetString("denom"),
+		TokenMap:       tokenMap,
 	}
 }
 
@@ -119,14 +123,6 @@ func (c MigrateConfig) Validate() error {
 
 	if c.ChainHome == "" {
 		return errors.New("chain home is required")
-	}
-
-	if c.Amount == 0 {
-		return errors.New("amount is required")
-	}
-
-	if c.Denom == "" {
-		return errors.New("denom is required")
 	}
 
 	return nil

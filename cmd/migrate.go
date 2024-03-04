@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"time"
 
@@ -10,7 +11,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/liftedinit/mfx-migrator/internal/chain"
+	"github.com/liftedinit/mfx-migrator/internal/many"
+	"github.com/liftedinit/mfx-migrator/internal/utils"
+
+	"github.com/liftedinit/mfx-migrator/internal/manifest"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
@@ -102,14 +106,6 @@ func setupMigrateFlags() {
 	if err := viper.BindPFlag("chain-home", migrateCmd.Flags().Lookup("chain-home")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().Int64("amount", 0, "Amount of tokens to migrate")
-	if err := viper.BindPFlag("amount", migrateCmd.Flags().Lookup("amount")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-	migrateCmd.Flags().String("denom", "", "Denomination of the tokens to migrate")
-	if err := viper.BindPFlag("denom", migrateCmd.Flags().Lookup("denom")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
 	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
 	if err := migrateCmd.MarkFlagRequired("uuid"); err != nil {
 		slog.Error(ErrorMarkingFlagRequired, "error", err)
@@ -119,22 +115,80 @@ func setupMigrateFlags() {
 	}
 }
 
+func mapToken(symbol string, tokenMap map[string]utils.TokenInfo) (*utils.TokenInfo, error) {
+	if _, ok := tokenMap[symbol]; !ok {
+		slog.Error("token not found in token map", "symbol", symbol, "tokenMap", tokenMap)
+		return nil, fmt.Errorf("token %s not found in token map", symbol)
+	}
+	info := tokenMap[symbol]
+	return &info, nil
+}
+
+// convertPrecision adjusts the precision of an integer number.
+// TODO: Harden this function
+func convertPrecision(n int64, currentPrecision int64, targetPrecision int64) (int64, error) {
+	if currentPrecision == targetPrecision {
+		return 0, fmt.Errorf("current precision is equal to target precision: %d", currentPrecision)
+	}
+
+	// Calculate the difference in precision
+	precisionDiff := targetPrecision - currentPrecision
+
+	if precisionDiff > 0 {
+		// Increase precision by multiplying
+		return n * int64(math.Pow(10, float64(precisionDiff))), nil
+	} else {
+		// Decrease precision by dividing
+		return n / int64(math.Pow(10, float64(-precisionDiff))), nil
+	}
+}
+
 // migrate migrates a work item to the Manifest Ledger.
 func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error {
 	slog.Info("Migrating work item...", "uuid", item.UUID)
 
 	remoteItem, err := store.GetWorkItem(r, item.UUID)
 	if err != nil {
+		slog.Error("error getting remote work item", "error", err)
 		return err
 	}
 
 	// Verify the item is ready for migration
 	if err = verifyItemStatus(remoteItem); err != nil {
+		slog.Error("error verifying item status", "error", err)
 		return err
 	}
 
 	// Verify the local and remote items match
 	if err = compareItems(item, remoteItem); err != nil {
+		slog.Error("error comparing items", "error", err)
+		return err
+	}
+
+	txInfo, err := many.GetTxInfo(r, item.ManyHash)
+	if err != nil {
+		slog.Error("error getting MANY tx info", "error", err)
+		return err
+	}
+
+	// Check the MANY transaction info
+	if err = many.CheckTxInfo(txInfo, item.UUID); err != nil {
+		slog.Error("error checking MANY tx info", "error", err)
+		return err
+	}
+
+	// Map the MANY token symbol to the destination chain token
+	tokenInfo, err := mapToken(txInfo.Arguments.Symbol, config.TokenMap)
+	if err != nil {
+		slog.Error("error mapping token", "error", err)
+		return err
+	}
+
+	// Convert the amount to the destination chain precision
+	// TODO: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
+	amount, err := convertPrecision(txInfo.Arguments.Amount, 9, tokenInfo.Precision)
+	if err != nil {
+		slog.Error("error converting token to destination precision", "error", err)
 		return err
 	}
 
@@ -143,24 +197,28 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 	// If the item status is not MIGRATING, set it to MIGRATING
 	if newItem.Status != store.MIGRATING {
 		if err = setAsMigrating(r, newItem); err != nil {
+			slog.Error("error setting status to MIGRATING", "error", err)
 			return err
 		}
 	}
 
 	// Send the tokens
-	txHash, blockTime, err := sendTokens(r, &newItem, config)
+	txHash, blockTime, err := sendTokens(r, &newItem, config, tokenInfo.Denom, amount)
 	if err != nil {
+		slog.Error("error sending tokens", "error", err)
 		return err
 	}
 
 	slog.Info("Migration succeeded on chain...", "hash", txHash, "timestamp", blockTime)
 	// Set the status to COMPLETED
 	if err = setAsCompleted(r, newItem, txHash, blockTime); err != nil {
+		slog.Error("error setting status to COMPLETED", "error", err)
 		return err
 	}
 
 	// Delete the state file, as the work item is now completed and the state is stored in the database
 	if err = deleteState(&newItem); err != nil {
+		slog.Error("error deleting state", "error", err)
 		return err
 	}
 
@@ -209,17 +267,16 @@ func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error 
 }
 
 // sendTokens sends the tokens from the bank account to the user account.
-func sendTokens(r *resty.Client, item *store.WorkItem, config MigrateConfig) (*string, *time.Time, error) {
-	txResponse, blockTime, err := chain.Migrate(item, chain.MigrationConfig{
+func sendTokens(r *resty.Client, item *store.WorkItem, config MigrateConfig, denom string, amount int64) (*string, *time.Time, error) {
+	txResponse, blockTime, err := manifest.Migrate(item, manifest.MigrationConfig{
 		ChainID:        config.ChainID,
 		NodeAddress:    config.NodeAddress,
 		KeyringBackend: config.KeyringBackend,
 		ChainHome:      config.ChainHome,
 		AddressPrefix:  config.AddressPrefix,
 		BankAddress:    config.BankAddress,
-		Amount:         config.Amount,
-		Denom:          config.Denom,
-	})
+		TokenMap:       config.TokenMap,
+	}, denom, amount)
 	if err != nil {
 		slog.Error("error during migration, operator intervention required", "error", err)
 		errStr := err.Error()

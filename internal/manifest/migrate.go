@@ -1,4 +1,4 @@
-package chain
+package manifest
 
 import (
 	"bufio"
@@ -25,6 +25,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	"github.com/liftedinit/mfx-migrator/internal/utils"
+
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
@@ -38,8 +40,7 @@ type MigrationConfig struct {
 	ChainHome      string
 	AddressPrefix  string
 	BankAddress    string
-	Amount         int64
-	Denom          string
+	TokenMap       map[string]utils.TokenInfo
 }
 
 const defaultGasLimit uint64 = 200000
@@ -84,7 +85,7 @@ func newClientContext(chainID, nodeAddress, keyringBackend, chainHomeDir string,
 }
 
 // Migrate migrates the given amount of tokens to the specified address.
-func Migrate(item *store.WorkItem, migrateConfig MigrationConfig) (*sdk.TxResponse, *time.Time, error) {
+func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, amount int64) (*sdk.TxResponse, *time.Time, error) {
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount(migrateConfig.AddressPrefix, migrateConfig.AddressPrefix+"pub")
 
@@ -107,8 +108,8 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig) (*sdk.TxRespon
 		return nil, nil, fmt.Errorf("failed to parse manifest address: %w", err)
 	}
 
-	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(migrateConfig.Denom, sdk.NewInt(migrateConfig.Amount))))
-	txBuilder, err := prepareTx(clientCtx, msg, item.UUID.String(), migrateConfig.Denom)
+	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, sdk.NewInt(amount))))
+	txBuilder, err := prepareTx(clientCtx, msg, item.UUID.String(), denom)
 	if err != nil {
 		slog.Error("Failed to prepare transaction", "error", err)
 		return nil, nil, err
@@ -178,9 +179,10 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	}
 	initNum, initSeq := txFactory.AccountNumber(), txFactory.Sequence()
 	if initNum == 0 || initSeq == 0 {
-		accNum, seqNum, err := ctx.AccountRetriever.GetAccountNumberSequence(ctx, addr)
-		if err != nil {
-			return nil, nil, err
+		accNum, seqNum, aErr := ctx.AccountRetriever.GetAccountNumberSequence(ctx, addr)
+		if aErr != nil {
+			slog.Error("Error getting account number sequence", "error", aErr)
+			return nil, nil, aErr
 		}
 
 		if initNum == 0 {
@@ -193,9 +195,9 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	}
 
 	// Sign the transaction
-	if err := tx.Sign(txFactory, bankAccount, txBuilder, true); err != nil {
-		slog.Error("Failed to sign transaction", "error", err)
-		return nil, nil, fmt.Errorf("failed to sign transaction: %w", err)
+	if tErr := tx.Sign(txFactory, bankAccount, txBuilder, true); tErr != nil {
+		slog.Error("Failed to sign transaction", "error", tErr)
+		return nil, nil, fmt.Errorf("failed to sign transaction: %w", tErr)
 	}
 
 	// Broadcast the transaction
@@ -242,16 +244,17 @@ func waitForTx(rClient client.TendermintRPC, hash string) (*coretypes.ResultTx, 
 	}
 
 	for {
-		r, err := rClient.Tx(context.Background(), bHash, false)
-		if err != nil {
-			if strings.Contains(err.Error(), "not found") {
-				if err := waitForNextBlock(rClient); err != nil {
-					return nil, err
+		r, tErr := rClient.Tx(context.Background(), bHash, false)
+		if tErr != nil {
+			if strings.Contains(tErr.Error(), "not found") {
+				if cErr := waitForNextBlock(rClient); cErr != nil {
+					slog.Error("error waiting for next block", "error", cErr)
+					return nil, cErr
 				}
 				continue
 			}
-			slog.Error("Failed to fetch transaction", "error", err)
-			return nil, fmt.Errorf("error fetching transaction: %w", err)
+			slog.Error("Failed to fetch transaction", "error", tErr)
+			return nil, fmt.Errorf("error fetching transaction: %w", tErr)
 		}
 		return r, nil
 	}
