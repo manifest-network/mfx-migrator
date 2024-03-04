@@ -20,7 +20,6 @@ func CreateRestClient(ctx context.Context, url string, neighborhood uint64) *res
 
 	// If a resty client is already in the context, use it. Otherwise, create a new one.
 	// This allows the resty client to be injected for testing purposes.
-	// TODO: Is there a better way to do this?
 	var client *resty.Client
 	if ctxClient := ctx.Value(RestyClientKey); ctxClient != nil {
 		client = ctxClient.(*resty.Client)

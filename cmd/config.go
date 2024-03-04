@@ -90,7 +90,7 @@ func LoadMigrationConfigFromCLI() MigrateConfig {
 		panic(err)
 	}
 	return MigrateConfig{
-		ChainID:        viper.GetString("chainId"),
+		ChainID:        viper.GetString("chain-id"),
 		AddressPrefix:  viper.GetString("address-prefix"),
 		NodeAddress:    viper.GetString("node-address"),
 		KeyringBackend: viper.GetString("keyring-backend"),

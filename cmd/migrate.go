@@ -24,41 +24,44 @@ import (
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Execute the MFX token migration associated with the given UUID.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		config := LoadConfigFromCLI("migrate-uuid")
-		slog.Debug("args", "config", config)
-		if err := config.Validate(); err != nil {
-			return err
-		}
+	RunE:  MigrateCmdRunE,
+}
 
-		migrateConfig := LoadMigrationConfigFromCLI()
-		slog.Debug("args", "migrate-config", migrateConfig)
-		if err := migrateConfig.Validate(); err != nil {
-			return err
-		}
+func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
+	config := LoadConfigFromCLI("migrate-uuid")
+	slog.Debug("args", "config", config)
+	if err := config.Validate(); err != nil {
+		return err
+	}
 
-		slog.Info("Loading state...", "uuid", config.UUID)
-		item, err := store.LoadState(config.UUID)
-		if err != nil {
-			slog.Error("unable to load state", "error", err)
-			return err
-		}
+	migrateConfig := LoadMigrationConfigFromCLI()
+	slog.Debug("args", "migrate-config", migrateConfig)
+	if err := migrateConfig.Validate(); err != nil {
+		return err
+	}
 
-		if err := verifyItemStatus(item); err != nil {
-			return err
-		}
+	slog.Info("Loading state...", "uuid", config.UUID)
+	item, err := store.LoadState(config.UUID)
+	if err != nil {
+		slog.Error("unable to load state", "error", err)
+		return err
+	}
 
-		r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
-		if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
-			return err
-		}
+	if err := verifyItemStatus(item); err != nil {
+		return err
+	}
 
-		return migrate(r, item, migrateConfig)
-	},
+	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
+	if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
+		return err
+	}
+
+	return migrate(r, item, migrateConfig)
+
 }
 
 func init() {
-	setupMigrateFlags()
+	SetupMigrateCmdFlags(migrateCmd)
 	rootCmd.AddCommand(migrateCmd)
 }
 
@@ -80,37 +83,36 @@ func compareItems(item *store.WorkItem, remoteItem *store.WorkItem) error {
 	return nil
 }
 
-// TODO: Support migrating multiple work items at once
-func setupMigrateFlags() {
-	migrateCmd.Flags().String("chainId", "", "Chain ID of the blockchain to migrate to")
-	if err := viper.BindPFlag("chainId", migrateCmd.Flags().Lookup("chainId")); err != nil {
+func SetupMigrateCmdFlags(command *cobra.Command) {
+	command.Flags().String("chain-id", "", "Chain ID of the blockchain to migrate to")
+	if err := viper.BindPFlag("chain-id", command.Flags().Lookup("chain-id")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().String("address-prefix", "", "Address prefix of the blockchain to migrate to")
-	if err := viper.BindPFlag("address-prefix", migrateCmd.Flags().Lookup("address-prefix")); err != nil {
+	command.Flags().String("address-prefix", "", "Address prefix of the blockchain to migrate to")
+	if err := viper.BindPFlag("address-prefix", command.Flags().Lookup("address-prefix")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().String("node-address", "", "Node address of the blockchain to migrate to")
-	if err := viper.BindPFlag("node-address", migrateCmd.Flags().Lookup("node-address")); err != nil {
+	command.Flags().String("node-address", "", "Node address of the blockchain to migrate to")
+	if err := viper.BindPFlag("node-address", command.Flags().Lookup("node-address")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().String("keyring-backend", "", "Keyring backend to use")
-	if err := viper.BindPFlag("keyring-backend", migrateCmd.Flags().Lookup("keyring-backend")); err != nil {
+	command.Flags().String("keyring-backend", "", "Keyring backend to use")
+	if err := viper.BindPFlag("keyring-backend", command.Flags().Lookup("keyring-backend")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().String("bank-address", "", "Bank address to send tokens from")
-	if err := viper.BindPFlag("bank-address", migrateCmd.Flags().Lookup("bank-address")); err != nil {
+	command.Flags().String("bank-address", "", "Bank address to send tokens from")
+	if err := viper.BindPFlag("bank-address", command.Flags().Lookup("bank-address")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().String("chain-home", "", "Root directory of the chain configuration")
-	if err := viper.BindPFlag("chain-home", migrateCmd.Flags().Lookup("chain-home")); err != nil {
+	command.Flags().String("chain-home", "", "Root directory of the chain configuration")
+	if err := viper.BindPFlag("chain-home", command.Flags().Lookup("chain-home")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
-	migrateCmd.Flags().String("uuid", "", "UUID of the work item to claim")
-	if err := migrateCmd.MarkFlagRequired("uuid"); err != nil {
+	command.Flags().String("uuid", "", "UUID of the work item to claim")
+	if err := command.MarkFlagRequired("uuid"); err != nil {
 		slog.Error(ErrorMarkingFlagRequired, "error", err)
 	}
-	if err := viper.BindPFlag("migrate-uuid", migrateCmd.Flags().Lookup("uuid")); err != nil {
+	if err := viper.BindPFlag("migrate-uuid", command.Flags().Lookup("uuid")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 }
@@ -172,7 +174,7 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 	}
 
 	// Check the MANY transaction info
-	if err = many.CheckTxInfo(txInfo, item.UUID); err != nil {
+	if err = many.CheckTxInfo(txInfo, item.UUID, item.ManifestAddress); err != nil {
 		slog.Error("error checking MANY tx info", "error", err)
 		return err
 	}

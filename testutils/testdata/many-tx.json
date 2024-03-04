@@ -1,0 +1,9 @@
+{
+  "argument": {
+    "from": "foobar",
+    "to": "maiyg",
+    "amount": 101,
+    "symbol": "dummy",
+    "memo": ["5aa19d2a-4bdf-4687-a850-1804756b3f1f", "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2"]
+  }
+}

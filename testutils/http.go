@@ -20,6 +20,8 @@ var (
 	DefaultMigrationsUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", "0")
 	DefaultMigrationUrl  = DefaultMigrationsUrl + Uuidv4Regex
 
+	DefaultTransactionUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/transactions/", "0")
+
 	MigrationsUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", Neighborhood)
 	MigrationUrl  = MigrationsUrl + Uuidv4Regex
 	LoginUrl      = RootUrl + "auth/login"
@@ -30,10 +32,13 @@ var (
 //go:embed testdata/work-item-update-success.json
 //go:embed testdata/work-item-update-failure.json
 //go:embed testdata/work-item-update-force.json
+//go:embed testdata/work-item-update-migrating.json
 //go:embed testdata/work-item-force.json
 //go:embed testdata/no-work-items-available.json
 //go:embed testdata/garbage.json
 //go:embed testdata/auth-token.json
+//go:embed testdata/claimed-work-item.json
+//go:embed testdata/many-tx.json
 var mockData embed.FS
 
 // CreateJsonResponderFromFile creates a new JSON responder from a file.

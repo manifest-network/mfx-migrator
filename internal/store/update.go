@@ -62,8 +62,8 @@ func updateWorkItem(r *resty.Client, item WorkItem) error {
 		utils.EqualTimePtr(updateResponse.ManifestDatetime, item.ManifestDatetime) &&
 		utils.EqualStringPtr(updateResponse.ManifestHash, item.ManifestHash) &&
 		utils.EqualStringPtr(updateResponse.Error, item.Error)) {
-		slog.Error("work item not updated", "uuid", item.UUID)
-		return fmt.Errorf("work item not updated: %s", item.UUID)
+		slog.Error("work item not updated", "item", item)
+		return fmt.Errorf("work item not updated: %v", item)
 	}
 
 	return nil
