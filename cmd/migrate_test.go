@@ -61,6 +61,8 @@ func TestMigrateCmd(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	setupWorkItem(t)
+	err := testutils.CopyDirFromEmbedFS(testutils.MockKeyring, "keyring-test", tmpdir)
+	require.NoError(t, err)
 
 	urlP := []string{"--url", testutils.RootUrl}
 	uuidP := []string{"--uuid", dummyUUIDStr}
@@ -93,8 +95,7 @@ func TestMigrateCmd(t *testing.T) {
 		{name: "UUUPCANB", args: append(slice, keyringBackendP...), err: errors.New("bank address is required")},
 		{name: "UUUPCANBK", args: append(slice, bankAddressP...), err: errors.New("chain home is required")},
 		// TODO: Fix the following test case
-		// The following test case is failing because the key cannot be found in the keyring.
-		// The code tries to update the migration status to `failed` but fails to do so because the endpoint mock is not set up.
+		// The test case fails because I need to mock the blockchain
 		{name: "UUUPCANBKH", args: append(slice, chainHomeP...), endpoints: []testutils.Endpoint{
 			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/claimed-work-item.json", Code: http.StatusOK},

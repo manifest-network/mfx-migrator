@@ -243,20 +243,31 @@ func waitForTx(rClient client.TendermintRPC, hash string) (*coretypes.ResultTx, 
 		return nil, fmt.Errorf("failed to decode hash: %w", err)
 	}
 
+	// Create a context that will be cancelled after the specified timeout
+	// TODO: Configure timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
 	for {
-		r, tErr := rClient.Tx(context.Background(), bHash, false)
-		if tErr != nil {
-			if strings.Contains(tErr.Error(), "not found") {
-				if cErr := waitForNextBlock(rClient); cErr != nil {
-					slog.Error("error waiting for next block", "error", cErr)
-					return nil, cErr
+		select {
+		case <-ctx.Done():
+			// The context has been cancelled, return an error
+			return nil, ctx.Err()
+		default:
+			r, tErr := rClient.Tx(context.Background(), bHash, false)
+			if tErr != nil {
+				if strings.Contains(tErr.Error(), "not found") {
+					if cErr := waitForNextBlock(rClient); cErr != nil {
+						slog.Error("error waiting for next block", "error", cErr)
+						return nil, cErr
+					}
+					continue
 				}
-				continue
+				slog.Error("Failed to fetch transaction", "error", tErr)
+				return nil, fmt.Errorf("error fetching transaction: %w", tErr)
 			}
-			slog.Error("Failed to fetch transaction", "error", tErr)
-			return nil, fmt.Errorf("error fetching transaction: %w", tErr)
+			return r, nil
 		}
-		return r, nil
 	}
 }
 
@@ -285,6 +296,7 @@ func waitForBlockHeight(client client.TendermintRPC, height int64) error {
 				return nil
 			}
 		case <-time.After(30 * time.Second):
+			// TODO: Configure timeout
 			slog.Error("Timeout exceeded waiting for block")
 			return fmt.Errorf("timeout exceeded waiting for block")
 		}

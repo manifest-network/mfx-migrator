@@ -27,18 +27,7 @@ var (
 	LoginUrl      = RootUrl + "auth/login"
 )
 
-//go:embed testdata/work-items.json
-//go:embed testdata/work-item.json
-//go:embed testdata/work-item-update-success.json
-//go:embed testdata/work-item-update-failure.json
-//go:embed testdata/work-item-update-force.json
-//go:embed testdata/work-item-update-migrating.json
-//go:embed testdata/work-item-force.json
-//go:embed testdata/no-work-items-available.json
-//go:embed testdata/garbage.json
-//go:embed testdata/auth-token.json
-//go:embed testdata/claimed-work-item.json
-//go:embed testdata/many-tx.json
+//go:embed testdata/*
 var mockData embed.FS
 
 // CreateJsonResponderFromFile creates a new JSON responder from a file.
