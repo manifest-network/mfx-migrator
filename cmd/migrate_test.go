@@ -21,15 +21,15 @@ import (
 	"github.com/liftedinit/mfx-migrator/testutils"
 )
 
-func TestMigrateCmd(t *testing.T) {
-	tmpdir := testutils.SetupTmpDir(t)
-	defer os.RemoveAll(tmpdir)
+const (
+	dummyUUIDStr      = "5aa19d2a-4bdf-4687-a850-1804756b3f1f"
+	dummyHash         = "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78"
+	dummyManifestAddr = "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2"
+	dummyCreatedDate  = "2024-03-01T16:54:02.651Z"
+)
 
-	dummyUUIDStr := "5aa19d2a-4bdf-4687-a850-1804756b3f1f"
+func setupWorkItem(t *testing.T) {
 	dummyUUID := uuid.MustParse(dummyUUIDStr)
-	dummyHash := "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78"
-	dummyManifestAddr := "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2"
-	dummyCreatedDate := "2024-03-01T16:54:02.651Z"
 	parsedCreatedDate, err := time.Parse(time.RFC3339, dummyCreatedDate)
 	if err != nil {
 		t.Fatal(err)
@@ -51,10 +51,16 @@ func TestMigrateCmd(t *testing.T) {
 		Error:            nil,
 	}
 
-	// Save the state
 	if err := store.SaveState(&item); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestMigrateCmd(t *testing.T) {
+	tmpdir := testutils.SetupTmpDir(t)
+	defer os.RemoveAll(tmpdir)
+
+	setupWorkItem(t)
 
 	urlP := []string{"--url", testutils.RootUrl}
 	uuidP := []string{"--uuid", dummyUUIDStr}
@@ -65,7 +71,7 @@ func TestMigrateCmd(t *testing.T) {
 	nodeAddressP := []string{"--node-address", "http://localhost:26657"}
 	keyringBackendP := []string{"--keyring-backend", "test"}
 	bankAddressP := []string{"--bank-address", "alice"}
-	chainHomeP := []string{"--chain-home", "/tmp/chain"}
+	chainHomeP := []string{"--chain-home", tmpdir}
 
 	var slice []string
 

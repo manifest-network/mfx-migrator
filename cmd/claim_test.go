@@ -34,16 +34,16 @@ func TestClaimCmd(t *testing.T) {
 		endpoints []testutils.Endpoint
 	}{
 		{name: "no arg", args: []string{}, err: errors.New("URL cannot be empty")},
-		{name: "url arg only", args: append(slice, urlP...), err: errors.New("username is required")},
-		{name: "url and username", args: append(slice, usernameP...), err: errors.New("password is required")},
+		{name: "U", args: append(slice, urlP...), err: errors.New("username is required")},
+		{name: "UU", args: append(slice, usernameP...), err: errors.New("password is required")},
 		// The default neighborhood value is 0
-		{name: "url, username and password", args: append(slice, passwordP...), endpoints: []testutils.Endpoint{
+		{name: "UUP", args: append(slice, passwordP...), endpoints: []testutils.Endpoint{
 			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
 			{Method: "GET", Url: testutils.DefaultMigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item-update-success.json", Code: http.StatusOK},
 		}},
-		{name: "url, username, password and neighborhood", args: append(slice, neighborhoodP...), endpoints: []testutils.Endpoint{
+		{name: "UUPN", args: append(slice, neighborhoodP...), endpoints: []testutils.Endpoint{
 			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
 			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
