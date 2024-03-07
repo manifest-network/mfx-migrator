@@ -24,8 +24,9 @@ type testCase struct {
 }
 
 func TestStore_Claim(t *testing.T) {
-	tempdir := testutils.SetupTmpDir(t)
-	defer os.RemoveAll(tempdir)
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
 
 	testUrl, _ := url.Parse(testutils.RootUrl)
 	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", testutils.Neighborhood)

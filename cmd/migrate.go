@@ -18,8 +18,6 @@ import (
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
-// TODO: Tests
-
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
@@ -84,36 +82,31 @@ func compareItems(item *store.WorkItem, remoteItem *store.WorkItem) error {
 }
 
 func SetupMigrateCmdFlags(command *cobra.Command) {
-	command.Flags().String("chain-id", "", "Chain ID of the blockchain to migrate to")
-	if err := viper.BindPFlag("chain-id", command.Flags().Lookup("chain-id")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
+	args := []struct {
+		name     string
+		key      string
+		usage    string
+		required bool
+	}{
+		{"chain-id", "chain-id", "Chain ID of the blockchain to migrate to", false},
+		{"address-prefix", "address-prefix", "Address prefix of the blockchain to migrate to", false},
+		{"node-address", "node-address", "Node address of the blockchain to migrate to", false},
+		{"keyring-backend", "keyring-backend", "Keyring backend to use", false},
+		{"bank-address", "bank-address", "Bank address to send tokens from", false},
+		{"chain-home", "chain-home", "Root directory of the chain configuration", false},
+		{"uuid", "migrate-uuid", "UUID of the work item to claim", true},
 	}
-	command.Flags().String("address-prefix", "", "Address prefix of the blockchain to migrate to")
-	if err := viper.BindPFlag("address-prefix", command.Flags().Lookup("address-prefix")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-	command.Flags().String("node-address", "", "Node address of the blockchain to migrate to")
-	if err := viper.BindPFlag("node-address", command.Flags().Lookup("node-address")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-	command.Flags().String("keyring-backend", "", "Keyring backend to use")
-	if err := viper.BindPFlag("keyring-backend", command.Flags().Lookup("keyring-backend")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-	command.Flags().String("bank-address", "", "Bank address to send tokens from")
-	if err := viper.BindPFlag("bank-address", command.Flags().Lookup("bank-address")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-	command.Flags().String("chain-home", "", "Root directory of the chain configuration")
-	if err := viper.BindPFlag("chain-home", command.Flags().Lookup("chain-home")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-	command.Flags().String("uuid", "", "UUID of the work item to claim")
-	if err := command.MarkFlagRequired("uuid"); err != nil {
-		slog.Error(ErrorMarkingFlagRequired, "error", err)
-	}
-	if err := viper.BindPFlag("migrate-uuid", command.Flags().Lookup("uuid")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
+
+	for _, arg := range args {
+		command.Flags().String(arg.name, "", arg.usage)
+		if err := viper.BindPFlag(arg.key, command.Flags().Lookup(arg.name)); err != nil {
+			slog.Error(ErrorBindingFlag, "error", err)
+		}
+		if arg.required {
+			if err := command.MarkFlagRequired(arg.name); err != nil {
+				slog.Error(ErrorMarkingFlagRequired, "error", err)
+			}
+		}
 	}
 }
 

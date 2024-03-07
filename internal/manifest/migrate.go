@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -30,7 +31,6 @@ import (
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
-// TODO: Tests
 // TODO: Refactor & Cleanup
 
 type MigrationConfig struct {
@@ -108,7 +108,7 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 		return nil, nil, fmt.Errorf("failed to parse manifest address: %w", err)
 	}
 
-	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, sdk.NewInt(amount))))
+	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(amount))))
 	txBuilder, err := prepareTx(clientCtx, msg, item.UUID.String(), denom)
 	if err != nil {
 		slog.Error("Failed to prepare transaction", "error", err)
@@ -155,7 +155,7 @@ func prepareTx(ctx client.Context, msg sdk.Msg, memo, denom string) (client.TxBu
 	}
 
 	txBuilder.SetMemo(memo)
-	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(denom, sdk.NewInt(1))))
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(1))))
 	txBuilder.SetGasLimit(defaultGasLimit)
 
 	return txBuilder, nil
@@ -195,7 +195,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	}
 
 	// Sign the transaction
-	if tErr := tx.Sign(txFactory, bankAccount, txBuilder, true); tErr != nil {
+	if tErr := tx.Sign(context.Background(), txFactory, bankAccount, txBuilder, true); tErr != nil {
 		slog.Error("Failed to sign transaction", "error", tErr)
 		return nil, nil, fmt.Errorf("failed to sign transaction: %w", tErr)
 	}
@@ -236,7 +236,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 }
 
 // waitForTx waits for a transaction to be included in a block.
-func waitForTx(rClient client.TendermintRPC, hash string) (*coretypes.ResultTx, error) {
+func waitForTx(rClient client.CometRPC, hash string) (*coretypes.ResultTx, error) {
 	bHash, err := hex.DecodeString(hash)
 	if err != nil {
 		slog.Error("Failed to decode hash", "error", err)
@@ -271,7 +271,7 @@ func waitForTx(rClient client.TendermintRPC, hash string) (*coretypes.ResultTx, 
 	}
 }
 
-func getLatestBlockHeight(client client.TendermintRPC) (int64, error) {
+func getLatestBlockHeight(client client.CometRPC) (int64, error) {
 	status, err := client.Status(context.Background())
 	if err != nil {
 		slog.Error("Failed to get blockchain status", "error", err)
@@ -280,7 +280,7 @@ func getLatestBlockHeight(client client.TendermintRPC) (int64, error) {
 	return status.SyncInfo.LatestBlockHeight, nil
 }
 
-func waitForBlockHeight(client client.TendermintRPC, height int64) error {
+func waitForBlockHeight(client client.CometRPC, height int64) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -303,7 +303,7 @@ func waitForBlockHeight(client client.TendermintRPC, height int64) error {
 	}
 }
 
-func waitForNextBlock(client client.TendermintRPC) error {
+func waitForNextBlock(client client.CometRPC) error {
 	latestHeight, err := getLatestBlockHeight(client)
 	if err != nil {
 		slog.Error("Failed to get latest block height", "error", err)

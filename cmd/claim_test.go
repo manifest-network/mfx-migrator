@@ -17,8 +17,9 @@ import (
 )
 
 func TestClaimCmd(t *testing.T) {
-	tmpdir := testutils.SetupTmpDir(t)
-	defer os.RemoveAll(tmpdir)
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
 
 	var slice []string
 	urlP := []string{"--url", testutils.RootUrl}

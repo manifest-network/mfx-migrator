@@ -7,14 +7,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/testutils"
-
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
 func TestSaveLoadState(t *testing.T) {
-	tempDir := testutils.SetupTmpDir(t)
-	defer os.RemoveAll(tempDir)
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
 
 	someUUID := uuid.New()
 	item := &store.WorkItem{
