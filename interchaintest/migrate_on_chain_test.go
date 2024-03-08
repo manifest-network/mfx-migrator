@@ -3,6 +3,7 @@ package interchaintest
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,6 +22,8 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/jarcoal/httpmock"
 	"github.com/liftedinit/manifest-ledger/interchaintest/helpers"
+	"github.com/liftedinit/mfx-migrator/cmd"
+	"github.com/liftedinit/mfx-migrator/testutils"
 	"github.com/spf13/cobra"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -28,13 +31,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
-
-	"github.com/liftedinit/mfx-migrator/cmd"
-	"github.com/liftedinit/mfx-migrator/testutils"
 )
 
 func TestMigrateOnChain(t *testing.T) {
-	tmpdir := t.TempDir()
+	tmpdir := interchaintest.TempDir(t)
 	if err := os.Chdir(tmpdir); err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,8 @@ func TestMigrateOnChain(t *testing.T) {
 		fmt.Sprintf("POA_ADMIN_ADDRESS=%s", accAddr),
 	}
 
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t, zaptest.Level(zapcore.DebugLevel)), []*interchaintest.ChainSpec{
+	logger := zaptest.NewLogger(t, zaptest.Level(zapcore.DebugLevel))
+	cf := interchaintest.NewBuiltinChainFactory(logger, []*interchaintest.ChainSpec{
 		{
 			Name:          "manifest-ledger",
 			Version:       "v0.0.1-alpha",
@@ -93,7 +94,6 @@ func TestMigrateOnChain(t *testing.T) {
 	//uaddr, addr2 := user1.FormattedAddress(), user2.FormattedAddress()
 
 	user1, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "default", userMnemonic, DefaultGenesisAmt, appChain)
-	t.Log("USER 1 ADDR", user1.FormattedAddress())
 	require.NoError(t, err)
 
 	node := appChain.GetNode()
@@ -168,14 +168,13 @@ func TestMigrateOnChain(t *testing.T) {
 		args      []string
 		err       error
 		out       string
-		endpoints []testutils.Endpoint
+		endpoints []HttpResponder
 	}{
-		// TODO: Modify how responders are registered. I need to different responses for the same URL in this test.
-		{name: "UUUPCANBKH", args: append(slice, chainHomeP...), endpoints: []testutils.Endpoint{
-			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
-			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/claimed-work-item.json", Code: http.StatusOK},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Data: "testdata/many-tx.json", Code: http.StatusOK},
-			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item-update-migrating.json", Code: http.StatusOK},
+		{name: "UUUPCANBKH", args: append(slice, chainHomeP...), endpoints: []HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: ClaimedWorkItemResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: TransactionResponseResponder},
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: MigrationUpdateResponder},
 		}, out: "Migration complete"},
 	}
 
@@ -183,7 +182,7 @@ func TestMigrateOnChain(t *testing.T) {
 		slice = append(slice, tc.args...)
 		t.Run(tc.name, func(t *testing.T) {
 			for _, endpoint := range tc.endpoints {
-				testutils.SetupMockResponder(t, endpoint.Method, endpoint.Url, endpoint.Data, endpoint.Code)
+				httpmock.RegisterResponder(endpoint.Method, endpoint.Url, endpoint.Responder)
 			}
 
 			out, err := testutils.Execute(t, command, tc.args...)
@@ -193,11 +192,78 @@ func TestMigrateOnChain(t *testing.T) {
 			} else {
 				require.ErrorContains(t, err, tc.err.Error())
 			}
-
 		})
 	}
 
 	t.Cleanup(func() {
 		_ = ic.Close()
 	})
+}
+
+var AuthResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]string{"access_token": "ya29.Gl0UBZ3"})
+var ClaimedWorkItemResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
+	"status":           2,
+	"createdDate":      "2024-03-01T16:54:02.651Z",
+	"uuid":             "5aa19d2a-4bdf-4687-a850-1804756b3f1f",
+	"manyHash":         "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78",
+	"manifestAddress":  "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2",
+	"manifestHash":     nil,
+	"manifestDatetime": nil,
+	"error":            nil,
+})
+
+var TransactionResponseResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
+	"argument": map[string]any{
+		"from":   "foobar",
+		"to":     "maiyg",
+		"amount": 101,
+		"symbol": "dummy",
+		"memo":   []string{"5aa19d2a-4bdf-4687-a850-1804756b3f1f", "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2"},
+	},
+})
+
+var callCount = 0
+var MigrationUpdateResponder = func(r *http.Request) (*http.Response, error) {
+	callCount++
+	if callCount == 1 {
+		// Return the first response
+		return httpmock.NewJsonResponse(200, map[string]interface{}{
+			"status":           3,
+			"createdDate":      "2024-03-01T16:54:02.651Z",
+			"uuid":             "5aa19d2a-4bdf-4687-a850-1804756b3f1f",
+			"manyHash":         "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78",
+			"manifestAddress":  "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2",
+			"manifestHash":     nil,
+			"manifestDatetime": nil,
+			"error":            nil,
+		})
+	} else if callCount == 2 {
+		var item map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&item)
+		if err != nil {
+			return httpmock.NewJsonResponse(http.StatusNotFound, nil)
+		}
+		defer r.Body.Close()
+
+		// Return the second response
+		return httpmock.NewJsonResponse(200, map[string]interface{}{
+			"status":           4,
+			"createdDate":      "2024-03-01T16:54:02.651Z",
+			"uuid":             "5aa19d2a-4bdf-4687-a850-1804756b3f1f",
+			"manyHash":         "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78",
+			"manifestAddress":  "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2",
+			"manifestHash":     item["manifestHash"],
+			"manifestDatetime": item["manifestDatetime"],
+			"error":            nil,
+		})
+	} else {
+		// Default response
+		return httpmock.NewJsonResponse(http.StatusNotFound, nil)
+	}
+}
+
+type HttpResponder struct {
+	Method    string
+	Url       string
+	Responder func(r *http.Request) (*http.Response, error)
 }
