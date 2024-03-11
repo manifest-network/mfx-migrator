@@ -179,7 +179,7 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 		return err
 	}
 
-	slog.Info("Amount before conversion", "amount", txInfo.Arguments.Amount)
+	slog.Debug("Amount before conversion", "amount", txInfo.Arguments.Amount)
 
 	// Convert the amount to the destination chain precision
 	// TODO: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
@@ -189,7 +189,7 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 		return err
 	}
 
-	slog.Info("Amount after conversion", "amount", amount)
+	slog.Debug("Amount after conversion", "amount", amount)
 
 	var newItem = *item
 
