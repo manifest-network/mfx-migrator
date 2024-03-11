@@ -21,8 +21,6 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/jarcoal/httpmock"
 	"github.com/liftedinit/manifest-ledger/interchaintest/helpers"
-	"github.com/liftedinit/mfx-migrator/cmd"
-	"github.com/liftedinit/mfx-migrator/testutils"
 	"github.com/spf13/cobra"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -30,6 +28,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
+
+	"github.com/liftedinit/mfx-migrator/cmd"
+	"github.com/liftedinit/mfx-migrator/testutils"
 )
 
 func TestMigrateOnChain(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/jarcoal/httpmock"
+
 	"github.com/liftedinit/mfx-migrator/internal/many"
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
