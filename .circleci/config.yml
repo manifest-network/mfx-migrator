@@ -13,6 +13,7 @@ jobs:
   build:
     machine:
       image: ubuntu-2204
+    resource_class: large
     steps:
       - checkout
       - go/install:
