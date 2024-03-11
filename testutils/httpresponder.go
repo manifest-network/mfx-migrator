@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"cosmossdk.io/math"
 	"github.com/jarcoal/httpmock"
 
 	"github.com/liftedinit/mfx-migrator/internal/many"
@@ -36,15 +37,21 @@ var ClaimedWorkItemResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[s
 	"error":            nil,
 })
 
-var TransactionResponseResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
-	"argument": map[string]any{
-		"from":   "foobar",
-		"to":     many.IllegalAddr,
-		"amount": 1000, // 1000:1
-		"symbol": "dummy",
-		"memo":   []string{Uuid, ManifestAddress},
-	},
-})
+func MustNewTransactionResponseResponder(amount math.Int) httpmock.Responder {
+	var transactionResponseResponder, err = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
+		"argument": map[string]any{
+			"from":   "foobar",
+			"to":     many.IllegalAddr,
+			"amount": amount.Uint64(), // TODO: Fix BigInt
+			"symbol": "dummy",
+			"memo":   []string{Uuid, ManifestAddress},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return transactionResponseResponder
+}
 
 var callCount = 0
 var MigrationUpdateResponder = func(r *http.Request) (*http.Response, error) {

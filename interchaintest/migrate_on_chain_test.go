@@ -2,6 +2,7 @@ package interchaintest
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -64,11 +65,18 @@ func TestMigrateOnChain(t *testing.T) {
 		err       error
 		endpoints []testutils.HttpResponder
 	}{
-		// Perform a 1000:1 migration (1000 tokens -> 1 umfx)
-		{name: "UUUPCANBKH", args: slice, endpoints: []testutils.HttpResponder{
+		// Perform a 1000:1 migration (1 tokens -> 1 umfx)
+		{name: "UUUPCANBKH-1", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.ClaimedWorkItemResponder},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.TransactionResponseResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(math.NewInt(1))},
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, err: errors.New("amount after conversion is less than or equal to 0")},
+		// Perform a 1000:1 migration (1000 tokens -> 1 umfx)
+		{name: "UUUPCANBKH-1000", args: slice, endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.ClaimedWorkItemResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(math.NewInt(1000))},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}},
 		// TODO: Add more test cases
@@ -92,17 +100,17 @@ func TestMigrateOnChain(t *testing.T) {
 				require.ErrorContains(t, err, tc.err.Error())
 			} else {
 				require.NoError(t, err)
+
+				// Check the balance of the bank account post-migration
+				balance1, err = appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+				require.NoError(t, err)
+				require.Equal(t, balance1, DefaultGenesisAmt.Sub(math.NewInt(1)))
+
+				// Check the balance of the manifest destination account post-migration
+				balance2, err := appChain.BankQueryBalance(ctx, testutils.ManifestAddress, Denom)
+				require.NoError(t, err)
+				require.Equal(t, balance2, math.NewInt(1))
 			}
-
-			// Check the balance of the bank account post-migration
-			balance1, err = appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
-			require.NoError(t, err)
-			require.Equal(t, balance1, DefaultGenesisAmt.Sub(math.NewInt(1)))
-
-			// Check the balance of the manifest destination account post-migration
-			balance2, err := appChain.BankQueryBalance(ctx, testutils.ManifestAddress, Denom)
-			require.NoError(t, err)
-			require.Equal(t, balance2, math.NewInt(1))
 		})
 	}
 }

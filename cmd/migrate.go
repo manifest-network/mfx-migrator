@@ -190,6 +190,13 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 	}
 
 	slog.Debug("Amount after conversion", "amount", amount)
+	// Block migration if the amount is less than or equal to 0
+	// This can happen if the amount is less than the precision of the destination chain
+	// E.g., TokenA has 9 decimal places and TokenB has 6 decimal places, then the minimum amount of TokenA that can be migrated is 1000 resulting in 1 TokenB
+	if amount <= 0 {
+		slog.Error("amount after conversion is less than or equal to 0", "amount", amount)
+		return fmt.Errorf("amount after conversion is less than or equal to 0: %d", amount)
+	}
 
 	var newItem = *item
 
