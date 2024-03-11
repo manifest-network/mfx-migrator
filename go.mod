@@ -1,6 +1,6 @@
 module github.com/liftedinit/mfx-migrator
 
-go 1.22.0
+go 1.22.1
 
 require (
 	cosmossdk.io/math v1.2.0

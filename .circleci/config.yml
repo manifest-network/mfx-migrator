@@ -2,20 +2,21 @@
 # The Lifted Initiative
 version: 2.1
 
-GO_VERSION: &go_version '1.22'
-GORELEASER_VERSION: &goreleaser_version 'v1.23.0'
+GO_VERSION: &go_version '1.22.1'
+GORELEASER_VERSION: &goreleaser_version 'v1.24.0'
 
 orbs:
-  go: circleci/go@1.10.0
-  codecov: codecov/codecov@3.3.0
+  go: circleci/go@1.11.0
+  codecov: codecov/codecov@4.0.1
 
 jobs:
   build:
-    executor:
-      name: go/default
-      tag: *go_version
+    machine:
+      image: ubuntu-2204
     steps:
       - checkout
+      - go/install:
+          version: *go_version
       - go/load-cache
       - go/mod-download
       - go/save-cache
