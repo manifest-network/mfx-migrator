@@ -109,6 +109,8 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 	}
 
 	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(amount))))
+	slog.Debug("Send message", "message", msg)
+
 	txBuilder, err := prepareTx(clientCtx, msg, item.UUID.String(), denom)
 	if err != nil {
 		slog.Error("Failed to prepare transaction", "error", err)
@@ -155,7 +157,7 @@ func prepareTx(ctx client.Context, msg sdk.Msg, memo, denom string) (client.TxBu
 	}
 
 	txBuilder.SetMemo(memo)
-	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(1))))
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(0))))
 	txBuilder.SetGasLimit(defaultGasLimit)
 
 	return txBuilder, nil
@@ -166,7 +168,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	txFactory := tx.Factory{}.
 		WithChainID(ctx.ChainID).
 		WithKeybase(ctx.Keyring).
-		WithGas(300000).
+		WithGas(0).
 		WithGasAdjustment(1.0).
 		WithSignMode(signing.SignMode_SIGN_MODE_UNSPECIFIED).
 		WithAccountRetriever(ctx.AccountRetriever).
@@ -221,6 +223,8 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 		slog.Error("Failed to wait for transaction", "error", err)
 		return nil, nil, err
 	}
+
+	slog.Debug("Transaction result", "tx", txResult.TxResult)
 
 	slog.Info("Transaction included in block", "height", txResult.Height)
 

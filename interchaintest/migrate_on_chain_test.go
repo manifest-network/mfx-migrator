@@ -3,13 +3,12 @@ package interchaintest
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -83,16 +82,6 @@ func TestMigrateOnChain(t *testing.T) {
 	// Chains
 	appChain := chains[0].(*cosmos.CosmosChain)
 
-	//poaAdmin, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "acc0", accMnemonic, DefaultGenesisAmt, appChain)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-
-	//users := interchaintest.GetAndFundTestUsers(t, ctx, "default", DefaultGenesisAmt, appChain, appChain, appChain)
-	//user1 := users[0]
-	//user1, user2 := users[0], users[1]
-	//uaddr, addr2 := user1.FormattedAddress(), user2.FormattedAddress()
-
 	user1, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "default", userMnemonic, DefaultGenesisAmt, appChain)
 	require.NoError(t, err)
 
@@ -104,7 +93,6 @@ func TestMigrateOnChain(t *testing.T) {
 	fmt.Println(p)
 	require.True(t, p.Inflation.AutomaticEnabled)
 	require.EqualValues(t, p.Inflation.MintDenom, Denom)
-	//inflationAddr := p.StakeHolders[0].Address
 
 	command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
 
@@ -140,7 +128,7 @@ func TestMigrateOnChain(t *testing.T) {
 	require.NoError(t, err)
 
 	urlP := []string{"--url", testutils.RootUrl}
-	uuidP := []string{"--uuid", "5aa19d2a-4bdf-4687-a850-1804756b3f1f"}
+	uuidP := []string{"--uuid", testutils.Uuid}
 	usernameP := []string{"--username", "user"}
 	passwordP := []string{"--password", "pass"}
 	chainIdP := []string{"--chain-id", "manifest-2"}
@@ -149,7 +137,7 @@ func TestMigrateOnChain(t *testing.T) {
 	keyringBackendP := []string{"--keyring-backend", "test"}
 	bankAddressP := []string{"--bank-address", user1.KeyName()}
 	chainHomeP := []string{"--chain-home", tmpdir}
-	logLevelP := []string{"-l", "info"}
+	logLevelP := []string{"-l", "debug"}
 
 	var slice []string
 	slice = append(slice, urlP...)
@@ -168,13 +156,13 @@ func TestMigrateOnChain(t *testing.T) {
 		args      []string
 		err       error
 		out       string
-		endpoints []HttpResponder
+		endpoints []testutils.HttpResponder
 	}{
-		{name: "UUUPCANBKH", args: append(slice, chainHomeP...), endpoints: []HttpResponder{
-			{Method: "POST", Url: testutils.LoginUrl, Responder: AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: ClaimedWorkItemResponder},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: TransactionResponseResponder},
-			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: MigrationUpdateResponder},
+		{name: "UUUPCANBKH", args: append(slice, chainHomeP...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.ClaimedWorkItemResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.TransactionResponseResponder},
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, out: "Migration complete"},
 	}
 
@@ -184,12 +172,21 @@ func TestMigrateOnChain(t *testing.T) {
 			for _, endpoint := range tc.endpoints {
 				httpmock.RegisterResponder(endpoint.Method, endpoint.Url, endpoint.Responder)
 			}
+			balance1, err := appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+			require.NoError(t, err)
+			require.Equal(t, balance1, DefaultGenesisAmt)
 
-			out, err := testutils.Execute(t, command, tc.args...)
+			_, err = testutils.Execute(t, command, tc.args...)
 
-			if tc.err == nil {
-				require.Contains(t, out, tc.out)
-			} else {
+			balance1, err = appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+			require.NoError(t, err)
+			require.Equal(t, balance1, DefaultGenesisAmt.Sub(math.NewInt(1)))
+
+			balance2, err := appChain.BankQueryBalance(ctx, testutils.ManifestAddress, Denom)
+			require.NoError(t, err)
+			require.Equal(t, balance2, math.NewInt(1))
+
+			if tc.err != nil {
 				require.ErrorContains(t, err, tc.err.Error())
 			}
 		})
@@ -198,72 +195,4 @@ func TestMigrateOnChain(t *testing.T) {
 	t.Cleanup(func() {
 		_ = ic.Close()
 	})
-}
-
-var AuthResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]string{"access_token": "ya29.Gl0UBZ3"})
-var ClaimedWorkItemResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
-	"status":           2,
-	"createdDate":      "2024-03-01T16:54:02.651Z",
-	"uuid":             "5aa19d2a-4bdf-4687-a850-1804756b3f1f",
-	"manyHash":         "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78",
-	"manifestAddress":  "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2",
-	"manifestHash":     nil,
-	"manifestDatetime": nil,
-	"error":            nil,
-})
-
-var TransactionResponseResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
-	"argument": map[string]any{
-		"from":   "foobar",
-		"to":     "maiyg",
-		"amount": 101,
-		"symbol": "dummy",
-		"memo":   []string{"5aa19d2a-4bdf-4687-a850-1804756b3f1f", "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2"},
-	},
-})
-
-var callCount = 0
-var MigrationUpdateResponder = func(r *http.Request) (*http.Response, error) {
-	callCount++
-	if callCount == 1 {
-		// Return the first response
-		return httpmock.NewJsonResponse(200, map[string]interface{}{
-			"status":           3,
-			"createdDate":      "2024-03-01T16:54:02.651Z",
-			"uuid":             "5aa19d2a-4bdf-4687-a850-1804756b3f1f",
-			"manyHash":         "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78",
-			"manifestAddress":  "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2",
-			"manifestHash":     nil,
-			"manifestDatetime": nil,
-			"error":            nil,
-		})
-	} else if callCount == 2 {
-		var item map[string]interface{}
-		err := json.NewDecoder(r.Body).Decode(&item)
-		if err != nil {
-			return httpmock.NewJsonResponse(http.StatusNotFound, nil)
-		}
-		defer r.Body.Close()
-
-		// Return the second response
-		return httpmock.NewJsonResponse(200, map[string]interface{}{
-			"status":           4,
-			"createdDate":      "2024-03-01T16:54:02.651Z",
-			"uuid":             "5aa19d2a-4bdf-4687-a850-1804756b3f1f",
-			"manyHash":         "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78",
-			"manifestAddress":  "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2",
-			"manifestHash":     item["manifestHash"],
-			"manifestDatetime": item["manifestDatetime"],
-			"error":            nil,
-		})
-	} else {
-		// Default response
-		return httpmock.NewJsonResponse(http.StatusNotFound, nil)
-	}
-}
-
-type HttpResponder struct {
-	Method    string
-	Url       string
-	Responder func(r *http.Request) (*http.Response, error)
 }

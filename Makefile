@@ -64,7 +64,7 @@ vet: ## Run go vet
 
 coverage: ## Run coverage report
 	@echo "--> Running coverage"
-	@go test -race -cpu=$$(nproc) -covermode=atomic -coverprofile=coverage.out $$(go list ./...) > /dev/null 2>&1
+	@go test -race -cpu=$$(nproc) -covermode=atomic -coverprofile=coverage.out $$(go list ./...) ./interchaintest/... -coverpkg=github.com/liftedinit/mfx-migrator/... > /dev/null 2>&1
 	@echo "--> Running coverage filter"
 	@./scripts/filter-coverage.sh
 	@echo "--> Running coverage report"
@@ -82,6 +82,6 @@ coverage: ## Run coverage report
 
 test: ## Run tests
 	@echo "--> Running tests"
-	@go test -race -cpu=$$(nproc) $$(go list ./...)
+	@go test -race -cpu=$$(nproc) $$(go list ./...) ./interchaintest/...
 
 .PHONY: test
