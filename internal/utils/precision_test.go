@@ -4,8 +4,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 func TestConvertPrecision(t *testing.T) {
