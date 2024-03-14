@@ -12,7 +12,7 @@ type TxInfo struct {
 	Arguments struct {
 		From   string   `json:"from"`
 		To     string   `json:"to"`
-		Amount int64    `json:"amount"` // Talib is not following the specification. This should be a BigInt
+		Amount string   `json:"amount"` // Talib is not following the specification. This should be a BigInt
 		Symbol string   `json:"symbol"`
 		Memo   []string `json:"memo"`
 	} `json:"argument"`

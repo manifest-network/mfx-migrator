@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"os"
 	"strings"
 	"time"
@@ -85,7 +86,7 @@ func newClientContext(chainID, nodeAddress, keyringBackend, chainHomeDir string,
 }
 
 // Migrate migrates the given amount of tokens to the specified address.
-func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, amount int64) (*sdk.TxResponse, *time.Time, error) {
+func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, amount *big.Int) (*sdk.TxResponse, *time.Time, error) {
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount(migrateConfig.AddressPrefix, migrateConfig.AddressPrefix+"pub")
 
@@ -108,7 +109,7 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 		return nil, nil, fmt.Errorf("failed to parse manifest address: %w", err)
 	}
 
-	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(amount))))
+	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, math.NewIntFromBigInt(amount))))
 	slog.Debug("Send message", "message", msg)
 
 	txBuilder, err := prepareTx(clientCtx, msg, item.UUID.String(), denom)
@@ -225,6 +226,10 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	}
 
 	slog.Debug("Transaction result", "tx", txResult.TxResult)
+	if txResult.TxResult.Code != 0 {
+		slog.Error("Transaction failed", "code", txResult.TxResult.Code, "log", txResult.TxResult.Log)
+		return nil, nil, fmt.Errorf("transaction failed: %s", txResult.TxResult.Log)
+	}
 
 	slog.Info("Transaction included in block", "height", txResult.Height)
 

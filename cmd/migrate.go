@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"math"
+	"math/big"
 	"os"
 	"time"
 
@@ -119,25 +119,6 @@ func mapToken(symbol string, tokenMap map[string]utils.TokenInfo) (*utils.TokenI
 	return &info, nil
 }
 
-// convertPrecision adjusts the precision of an integer number.
-// TODO: Harden this function
-func convertPrecision(n int64, currentPrecision int64, targetPrecision int64) (int64, error) {
-	if currentPrecision == targetPrecision {
-		return 0, fmt.Errorf("current precision is equal to target precision: %d", currentPrecision)
-	}
-
-	// Calculate the difference in precision
-	precisionDiff := targetPrecision - currentPrecision
-
-	if precisionDiff > 0 {
-		// Increase precision by multiplying
-		return n * int64(math.Pow(10, float64(precisionDiff))), nil
-	} else {
-		// Decrease precision by dividing
-		return n / int64(math.Pow(10, float64(-precisionDiff))), nil
-	}
-}
-
 // migrate migrates a work item to the Manifest Ledger.
 func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error {
 	slog.Info("Migrating work item...", "uuid", item.UUID)
@@ -183,19 +164,10 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 
 	// Convert the amount to the destination chain precision
 	// TODO: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
-	amount, err := convertPrecision(txInfo.Arguments.Amount, 9, tokenInfo.Precision)
+	amount, err := utils.ConvertPrecision(txInfo.Arguments.Amount, 9, tokenInfo.Precision)
 	if err != nil {
 		slog.Error("error converting token to destination precision", "error", err)
 		return err
-	}
-
-	slog.Debug("Amount after conversion", "amount", amount)
-	// Block migration if the amount is less than or equal to 0
-	// This can happen if the amount is less than the precision of the destination chain
-	// E.g., TokenA has 9 decimal places and TokenB has 6 decimal places, then the minimum amount of TokenA that can be migrated is 1000 resulting in 1 TokenB
-	if amount <= 0 {
-		slog.Error("amount after conversion is less than or equal to 0", "amount", amount)
-		return fmt.Errorf("amount after conversion is less than or equal to 0: %d", amount)
 	}
 
 	var newItem = *item
@@ -273,7 +245,7 @@ func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error 
 }
 
 // sendTokens sends the tokens from the bank account to the user account.
-func sendTokens(r *resty.Client, item *store.WorkItem, config MigrateConfig, denom string, amount int64) (*string, *time.Time, error) {
+func sendTokens(r *resty.Client, item *store.WorkItem, config MigrateConfig, denom string, amount *big.Int) (*string, *time.Time, error) {
 	txResponse, blockTime, err := manifest.Migrate(item, manifest.MigrationConfig{
 		ChainID:        config.ChainID,
 		NodeAddress:    config.NodeAddress,
