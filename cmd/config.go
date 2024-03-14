@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -33,15 +32,15 @@ func (c Config) Print() {
 // Validate the Config making sure all required fields are present and valid
 func (c Config) Validate() error {
 	if c.Username == "" {
-		return errors.New("username is required")
+		return fmt.Errorf("username is required")
 	}
 
 	if c.Password == "" {
-		return errors.New("password is required")
+		return fmt.Errorf("password is required")
 	}
 
 	if c.Url == "" {
-		return errors.New("url is required")
+		return fmt.Errorf("url is required")
 	}
 
 	if c.UUID != "" {
@@ -102,27 +101,27 @@ func LoadMigrationConfigFromCLI() MigrateConfig {
 
 func (c MigrateConfig) Validate() error {
 	if c.ChainID == "" {
-		return errors.New("chain ID is required")
+		return fmt.Errorf("chain ID is required")
 	}
 
 	if c.AddressPrefix == "" {
-		return errors.New("address prefix is required")
+		return fmt.Errorf("address prefix is required")
 	}
 
 	if c.NodeAddress == "" {
-		return errors.New("node address is required")
+		return fmt.Errorf("node address is required")
 	}
 
 	if c.KeyringBackend == "" {
-		return errors.New("keyring backend is required")
+		return fmt.Errorf("keyring backend is required")
 	}
 
 	if c.BankAddress == "" {
-		return errors.New("bank address is required")
+		return fmt.Errorf("bank address is required")
 	}
 
 	if c.ChainHome == "" {
-		return errors.New("chain home is required")
+		return fmt.Errorf("chain home is required")
 	}
 
 	return nil

@@ -2,8 +2,7 @@ package cmd_test
 
 import (
 	"context"
-	"errors"
-	"net/http"
+	"fmt"
 	"os"
 	"testing"
 
@@ -12,12 +11,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
+	"github.com/liftedinit/mfx-migrator/internal/store"
+
 	"github.com/liftedinit/mfx-migrator/cmd"
 	"github.com/liftedinit/mfx-migrator/testutils"
 )
 
 func TestClaimCmd(t *testing.T) {
-	if err := os.Chdir(t.TempDir()); err != nil {
+	tmpdir := t.TempDir()
+	if err := os.Chdir(tmpdir); err != nil {
 		t.Fatal(err)
 	}
 
@@ -32,25 +34,23 @@ func TestClaimCmd(t *testing.T) {
 		args      []string
 		err       error
 		out       string
-		endpoints []testutils.Endpoint
+		endpoints []testutils.HttpResponder
 	}{
-		{name: "no arg", args: []string{}, err: errors.New("URL cannot be empty")},
-		{name: "U", args: append(slice, urlP...), err: errors.New("username is required")},
-		{name: "UU", args: append(slice, usernameP...), err: errors.New("password is required")},
+		{name: "no arg", args: []string{}, err: fmt.Errorf("URL cannot be empty")},
+		{name: "U", args: append(slice, urlP...), err: fmt.Errorf("username is required")},
+		{name: "UU", args: append(slice, usernameP...), err: fmt.Errorf("password is required")},
 		// The default neighborhood value is 0
-		// TODO: Check for success
-		{name: "UUP", args: append(slice, passwordP...), endpoints: []testutils.Endpoint{
-			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
-			{Method: "GET", Url: testutils.DefaultMigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
-			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
-			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Data: "testdata/work-item-update-success.json", Code: http.StatusOK},
+		{name: "UUP", args: append(slice, passwordP...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: testutils.DefaultMigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CREATED)},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}},
-		// TODO: Check for success
-		{name: "UUPN", args: append(slice, neighborhoodP...), endpoints: []testutils.Endpoint{
-			{Method: "POST", Url: testutils.LoginUrl, Data: "testdata/auth-token.json", Code: http.StatusOK},
-			{Method: "GET", Url: testutils.MigrationsUrl, Data: "testdata/work-items.json", Code: http.StatusOK},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item.json", Code: http.StatusOK},
-			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Data: "testdata/work-item-update-success.json", Code: http.StatusOK},
+		{name: "UUPN", args: append(slice, neighborhoodP...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CREATED)},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}},
 	}
 	command := &cobra.Command{Use: "claim", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.ClaimCmdRunE}
@@ -71,15 +71,15 @@ func TestClaimCmd(t *testing.T) {
 		slice = append(slice, tc.args...)
 		t.Run(tc.name, func(t *testing.T) {
 			for _, endpoint := range tc.endpoints {
-				testutils.SetupMockResponder(t, endpoint.Method, endpoint.Url, endpoint.Data, endpoint.Code)
+				httpmock.RegisterResponder(endpoint.Method, endpoint.Url, endpoint.Responder)
 			}
 
-			out, err := testutils.Execute(t, command, tc.args...)
+			_, err := testutils.Execute(t, command, tc.args...)
 
 			require.Equal(t, tc.err, err)
 
 			if tc.err == nil {
-				require.Equal(t, tc.out, out)
+				require.FileExists(t, tmpdir+"/"+testutils.Uuid+".json")
 			}
 		})
 	}

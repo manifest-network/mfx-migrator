@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
 
 func TestPtr(t *testing.T) {

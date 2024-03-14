@@ -2,7 +2,7 @@ package cmd_test
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -35,22 +35,21 @@ func TestMigrateCmd(t *testing.T) {
 	var slice []string
 
 	tt := []struct {
-		name      string
-		args      []string
-		err       error
-		out       string
-		endpoints []testutils.Endpoint
+		name string
+		args []string
+		err  error
+		out  string
 	}{
-		{name: "no arg", args: []string{}, err: errors.New("URL cannot be empty")},
-		{name: "U", args: append(slice, urlP...), err: errors.New("required flag(s) \"uuid\" not set")},
-		{name: "UU", args: append(slice, uuidP...), err: errors.New("username is required")},
-		{name: "UUU", args: append(slice, usernameP...), err: errors.New("password is required")},
-		{name: "UUUP", args: append(slice, passwordP...), err: errors.New("chain ID is required")},
-		{name: "UUUPC", args: append(slice, chainIdP...), err: errors.New("address prefix is required")},
-		{name: "UUUPCA", args: append(slice, addressPrefixP...), err: errors.New("node address is required")},
-		{name: "UUUPCAN", args: append(slice, nodeAddressP...), err: errors.New("keyring backend is required")},
-		{name: "UUUPCANB", args: append(slice, keyringBackendP...), err: errors.New("bank address is required")},
-		{name: "UUUPCANBK", args: append(slice, bankAddressP...), err: errors.New("chain home is required")},
+		{name: "no arg", args: []string{}, err: fmt.Errorf("URL cannot be empty")},
+		{name: "U", args: append(slice, urlP...), err: fmt.Errorf("required flag(s) \"uuid\" not set")},
+		{name: "UU", args: append(slice, uuidP...), err: fmt.Errorf("username is required")},
+		{name: "UUU", args: append(slice, usernameP...), err: fmt.Errorf("password is required")},
+		{name: "UUUP", args: append(slice, passwordP...), err: fmt.Errorf("chain ID is required")},
+		{name: "UUUPC", args: append(slice, chainIdP...), err: fmt.Errorf("address prefix is required")},
+		{name: "UUUPCA", args: append(slice, addressPrefixP...), err: fmt.Errorf("node address is required")},
+		{name: "UUUPCAN", args: append(slice, nodeAddressP...), err: fmt.Errorf("keyring backend is required")},
+		{name: "UUUPCANB", args: append(slice, keyringBackendP...), err: fmt.Errorf("bank address is required")},
+		{name: "UUUPCANBK", args: append(slice, bankAddressP...), err: fmt.Errorf("chain home is required")},
 	}
 
 	command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
@@ -70,10 +69,6 @@ func TestMigrateCmd(t *testing.T) {
 	for _, tc := range tt {
 		slice = append(slice, tc.args...)
 		t.Run(tc.name, func(t *testing.T) {
-			for _, endpoint := range tc.endpoints {
-				testutils.SetupMockResponder(t, endpoint.Method, endpoint.Url, endpoint.Data, endpoint.Code)
-			}
-
 			out, err := testutils.Execute(t, command, tc.args...)
 
 			require.ErrorContains(t, err, tc.err.Error())

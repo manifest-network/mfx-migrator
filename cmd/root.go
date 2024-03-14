@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -113,7 +112,7 @@ func setLogLevel(logLevel string) error {
 // validateURL validates a URL is not empty and is a valid URL
 func validateURL(urlStr string) error {
 	if urlStr == "" {
-		return errors.New("URL cannot be empty")
+		return fmt.Errorf("URL cannot be empty")
 	}
 
 	_, err := url.ParseRequestURI(urlStr)

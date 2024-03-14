@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 
 	"github.com/liftedinit/mfx-migrator/internal/many"
@@ -12,11 +14,14 @@ import (
 )
 
 const (
-	CreatedDate     = "2024-03-01T16:54:02.651Z"
 	Uuid            = "5aa19d2a-4bdf-4687-a850-1804756b3f1f"
+	ManyFrom        = "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
+	ManySymbol      = "dummy"
 	ManyHash        = "d1e60bf3bbbe497448498f942d340b872a89046854827dc43dd703ccbf7a8c78"
 	ManifestAddress = "manifest1jjzy5en2000728mzs3wn86a6u6jpygzajj2fg2"
 )
+
+var CreatedDate = time.Date(2024, time.March, 1, 16, 54, 2, 651000000, time.UTC) // "2024-03-01T16:54:02.651Z"
 
 type HttpResponder struct {
 	Method    string
@@ -25,76 +30,122 @@ type HttpResponder struct {
 }
 
 var AuthResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]string{"access_token": "ya29.Gl0UBZ3"})
-var ClaimedWorkItemResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
-	"status":           store.CLAIMED,
-	"createdDate":      CreatedDate,
-	"uuid":             Uuid,
-	"manyHash":         ManyHash,
-	"manifestAddress":  ManifestAddress,
-	"manifestHash":     nil,
-	"manifestDatetime": nil,
-	"error":            nil,
-})
 
+// TODO: Random
 func MustNewTransactionResponseResponder(amount string) httpmock.Responder {
-	var transactionResponseResponder, err = httpmock.NewJsonResponder(http.StatusOK, map[string]any{
-		"argument": map[string]any{
-			"from":   "foobar",
-			"to":     many.IllegalAddr,
-			"amount": amount,
-			"symbol": "dummy",
-			"memo":   []string{Uuid, ManifestAddress},
-		},
-	})
+	response := many.TxInfo{Arguments: many.Arguments{
+		From:   ManyFrom,
+		To:     many.IllegalAddr,
+		Amount: amount,
+		Symbol: ManySymbol,
+		Memo:   []string{Uuid, ManifestAddress},
+	}}
+	var transactionResponseResponder, err = httpmock.NewJsonResponder(http.StatusOK, response)
 	if err != nil {
 		panic(err)
 	}
 	return transactionResponseResponder
 }
 
-var callCount = 0
-var MigrationUpdateResponder = func(r *http.Request) (*http.Response, error) {
-	callCount++
-	if callCount == 1 {
-		// Return the first response
-		return httpmock.NewJsonResponse(200, map[string]interface{}{
-			"status":           store.MIGRATING,
-			"createdDate":      CreatedDate,
-			"uuid":             Uuid,
-			"manyHash":         ManyHash,
-			"manifestAddress":  ManifestAddress,
-			"manifestHash":     nil,
-			"manifestDatetime": nil,
-			"error":            nil,
-		})
-	} else if callCount == 2 {
-		var item map[string]interface{}
-		err := json.NewDecoder(r.Body).Decode(&item)
-		if err != nil {
-			return httpmock.NewJsonResponse(http.StatusNotFound, nil)
-		}
-		defer r.Body.Close()
+// TODO: Random
+func MustAllMigrationsGetResponder(nb uint, status store.WorkItemStatus) httpmock.Responder {
+	if nb > 1 {
+		panic("nb must be <= 1")
+	}
 
-		if item["manifestHash"] == nil {
+	var items []store.WorkItem = nil
+	for i := 0; i < int(nb); i++ {
+		items = append(items, store.WorkItem{
+			Status:           status,
+			CreatedDate:      &CreatedDate,
+			UUID:             uuid.MustParse(Uuid),
+			ManyHash:         ManyHash,
+			ManifestAddress:  ManifestAddress,
+			ManifestHash:     nil,
+			ManifestDatetime: nil,
+		})
+	}
+
+	response := store.WorkItems{
+		Items: items,
+		Meta: store.Meta{
+			TotalItems:   len(items),
+			ItemCount:    len(items),
+			ItemsPerPage: 10,
+			TotalPages:   1,
+			CurrentPage:  1,
+		},
+	}
+	var allMigrationsGetResponder, err = httpmock.NewJsonResponder(http.StatusOK, response)
+	if err != nil {
+		panic(err)
+	}
+	return allMigrationsGetResponder
+}
+
+var NotFoundResponder, _ = httpmock.NewJsonResponder(http.StatusNotFound, nil)
+var GarbageResponder, _ = httpmock.NewJsonResponder(http.StatusOK, "{\"foo\": \"bar\"")
+
+// TODO: Random
+func MustMigrationGetResponder(status store.WorkItemStatus) httpmock.Responder {
+	response := store.WorkItem{
+		Status:           status,
+		CreatedDate:      &CreatedDate,
+		UUID:             uuid.MustParse(Uuid),
+		ManyHash:         ManyHash,
+		ManifestAddress:  ManifestAddress,
+		ManifestHash:     nil,
+		ManifestDatetime: nil,
+		Error:            nil,
+	}
+	var migrationGetResponder, err = httpmock.NewJsonResponder(http.StatusOK, response)
+	if err != nil {
+		panic(err)
+	}
+	return migrationGetResponder
+}
+
+var MigrationUpdateResponder = func(r *http.Request) (*http.Response, error) {
+	if r.Method != "PUT" {
+		return httpmock.NewStringResponse(http.StatusMethodNotAllowed, ""), nil
+	}
+
+	// Decode the request body
+	var item store.WorkItem
+
+	err := json.NewDecoder(r.Body).Decode(&item)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding request body: %v", err)
+	}
+	defer r.Body.Close()
+
+	response := store.WorkItemUpdateResponse{
+		Status: item.Status,
+	}
+
+	// Check the status of the work item
+	switch item.Status {
+	case store.CLAIMED:
+		return httpmock.NewJsonResponse(200, response)
+	case store.MIGRATING:
+		return httpmock.NewJsonResponse(200, response)
+	case store.COMPLETED:
+		if item.ManifestHash == nil {
 			return nil, fmt.Errorf("manifestHash is nil")
 		}
-		if item["manifestDatetime"] == nil {
-			return nil, fmt.Errorf("manifestDatetime is nil")
+		if item.ManifestDatetime == nil {
+			return nil, fmt.Errorf("manifestDatetime is empty")
 		}
-
-		// Return the second response
-		return httpmock.NewJsonResponse(200, map[string]interface{}{
-			"status":           store.COMPLETED,
-			"createdDate":      CreatedDate,
-			"uuid":             Uuid,
-			"manyHash":         ManyHash,
-			"manifestAddress":  ManifestAddress,
-			"manifestHash":     item["manifestHash"],
-			"manifestDatetime": item["manifestDatetime"],
-			"error":            nil,
-		})
-	} else {
-		// Default response
-		return httpmock.NewJsonResponse(http.StatusNotFound, nil)
+		response.ManifestHash = item.ManifestHash
+		response.ManifestDatetime = item.ManifestDatetime
+		return httpmock.NewJsonResponse(200, response)
+	case store.FAILED:
+		if item.Error == nil {
+			return nil, fmt.Errorf("error is nil")
+		}
+		response.Error = item.Error
+		return httpmock.NewJsonResponse(200, response)
+	default:
+		return nil, fmt.Errorf("invalid status: %v", item.Status)
 	}
 }

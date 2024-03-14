@@ -3,8 +3,10 @@ package store
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/pkg/errors"
 
 	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
@@ -13,7 +15,7 @@ import (
 func UpdateWorkItemAndSaveState(r *resty.Client, item WorkItem) error {
 	// 1. Update the work item
 	if err := updateWorkItem(r, item); err != nil {
-		return err
+		return errors.WithMessage(err, "error updating remote work item")
 	}
 
 	// 2. Save the work item state
@@ -48,6 +50,12 @@ func updateWorkItem(r *resty.Client, item WorkItem) error {
 	if response == nil {
 		slog.Error("no response returned when claiming work item")
 		return fmt.Errorf("no response returned when claiming work item: %s", item.UUID)
+	}
+
+	statusCode := response.StatusCode()
+	if statusCode != http.StatusOK {
+		slog.Error("response status code", "code", statusCode)
+		return fmt.Errorf("response status code: %d", statusCode)
 	}
 
 	// 3. Unmarshal the update response

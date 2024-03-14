@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ var verifyCmd = &cobra.Command{
 		uuidStr := viper.GetString("verify-uuid")
 		if uuidStr == "" {
 			slog.Error("uuid is required")
-			return errors.New("uuid is required")
+			return fmt.Errorf("uuid is required")
 		}
 
 		s, err := store.LoadState(uuidStr)

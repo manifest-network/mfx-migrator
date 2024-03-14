@@ -88,7 +88,7 @@ type WorkItems struct {
 
 // IsNil returns true if the WorkItems is nil
 func (wi WorkItems) IsNil() bool {
-	return wi.Items == nil
+	return len(wi.Items) == 0 && wi.Meta.TotalPages == 0 && wi.Meta.CurrentPage == 0 && wi.Meta.ItemsPerPage == 0 && wi.Meta.ItemCount == 0 && wi.Meta.TotalItems == 0
 }
 
 type ContextKey string

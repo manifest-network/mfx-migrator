@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
@@ -50,12 +50,12 @@ func AuthenticateRestClient(r *resty.Client, username, password string) error {
 	token := response.Result().(*store.Token)
 	if token == nil {
 		slog.Error("no token returned")
-		return errors.New("no token returned")
+		return fmt.Errorf("no token returned")
 	}
 
 	if token.AccessToken == "" {
 		slog.Error("empty token returned")
-		return errors.New("empty token returned")
+		return fmt.Errorf("empty token returned")
 	}
 
 	slog.Debug("setting auth token", "token", token.AccessToken)

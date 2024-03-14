@@ -2,7 +2,7 @@ package interchaintest
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -13,6 +13,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
+
+	"github.com/liftedinit/mfx-migrator/internal/store"
 
 	"github.com/liftedinit/mfx-migrator/cmd"
 	"github.com/liftedinit/mfx-migrator/testutils"
@@ -68,14 +70,14 @@ func TestMigrateOnChain(t *testing.T) {
 		// Perform a 1000:1 migration (1 tokens -> 1 umfx)
 		{name: "UUUPCANBKH-1", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.ClaimedWorkItemResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
-		}, err: errors.New("amount after conversion is less than or equal to 0")},
+		}, err: fmt.Errorf("amount after conversion is less than or equal to 0")},
 		// Perform a 1000:1 migration (1000 tokens -> 1 umfx)
 		{name: "UUUPCANBKH-1000", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.ClaimedWorkItemResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1000")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}},

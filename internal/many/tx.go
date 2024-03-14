@@ -8,14 +8,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type Arguments struct {
+	From   string   `json:"from"`
+	To     string   `json:"to"`
+	Amount string   `json:"amount"`
+	Symbol string   `json:"symbol"`
+	Memo   []string `json:"memo"`
+}
+
 type TxInfo struct {
-	Arguments struct {
-		From   string   `json:"from"`
-		To     string   `json:"to"`
-		Amount string   `json:"amount"` // Talib is not following the specification. This should be a BigInt
-		Symbol string   `json:"symbol"`
-		Memo   []string `json:"memo"`
-	} `json:"argument"`
+	Arguments Arguments `json:"argument"`
 }
 
 func GetTxInfo(r *resty.Client, hash string) (*TxInfo, error) {

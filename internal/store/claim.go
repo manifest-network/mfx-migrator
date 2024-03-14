@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
@@ -16,7 +17,7 @@ func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
 	items, err := GetAllWorkItems(r, &status)
 	if err != nil {
 		slog.Error(ErrorGettingWorkItems, "error", err)
-		return nil, err
+		return nil, errors.WithMessage(err, ErrorGettingWorkItems)
 	}
 
 	// 2. Loop over all work items
@@ -40,7 +41,7 @@ func ClaimWorkItemFromUUID(r *resty.Client, uuid uuid.UUID, force bool) (*WorkIt
 	item, err := GetWorkItem(r, uuid)
 	if err != nil {
 		slog.Error(ErrorGettingWorkItem, "error", err)
-		return nil, err
+		return nil, errors.WithMessage(err, ErrorGettingWorkItem)
 	}
 
 	// 2. Check if the work item is in the correct state to be claimed
@@ -58,7 +59,7 @@ func claimItem(r *resty.Client, item *WorkItem) (*WorkItem, error) {
 	newItem.Status = CLAIMED
 	if err := UpdateWorkItemAndSaveState(r, newItem); err != nil {
 		slog.Error(ErrorClaimingWorkItem, "error", err)
-		return nil, err
+		return nil, errors.WithMessage(err, ErrorClaimingWorkItem)
 	}
 
 	return &newItem, nil
