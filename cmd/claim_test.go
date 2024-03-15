@@ -23,6 +23,8 @@ func TestClaimCmd(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	workItemPath := tmpdir + "/" + testutils.Uuid + ".json"
+
 	var slice []string
 	urlP := []string{"--url", testutils.RootUrl}
 	usernameP := []string{"--username", "user"}
@@ -79,7 +81,7 @@ func TestClaimCmd(t *testing.T) {
 			require.Equal(t, tc.err, err)
 
 			if tc.err == nil {
-				require.FileExists(t, tmpdir+"/"+testutils.Uuid+".json")
+				require.FileExists(t, workItemPath)
 			}
 		})
 	}

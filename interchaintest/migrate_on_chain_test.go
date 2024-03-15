@@ -20,6 +20,16 @@ import (
 	"github.com/liftedinit/mfx-migrator/testutils"
 )
 
+type Amounts struct {
+	Old math.Int
+	New math.Int
+}
+
+type Expected struct {
+	Bank Amounts
+	User Amounts
+}
+
 func TestMigrateOnChain(t *testing.T) {
 	ctx := context.Background()
 	tmpdir := interchaintest.TempDir(t)
@@ -27,14 +37,13 @@ func TestMigrateOnChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutils.SetupWorkItem(t)
-
 	// Set up the chain and keyring
 	appChain, user1 := SetupChain(t, ctx)
 	chainConfig := appChain.Config()
 	err := SetupKeyring(tmpdir, []ibc.Wallet{user1})
 	require.NoError(t, err)
 
+	// Prepare the migrate command
 	command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
 	cmd.SetupRootCmdFlags(command)
 	cmd.SetupMigrateCmdFlags(command)
@@ -61,30 +70,67 @@ func TestMigrateOnChain(t *testing.T) {
 		"--chain-home", tmpdir,
 	}
 
+	defaultGenesisAmtMinOne := DefaultGenesisAmt.Sub(math.NewInt(1))  // Genesis amount - 1
+	defaultGenesisAmtPlusOne := DefaultGenesisAmt.Add(math.NewInt(1)) // Genesis amount + 1
+	currentPrecision := 9                                             // The precision of the "MANY" token
+	targetPrecision := 6                                              // The precision of the "MANIFEST" token
+	precision := currentPrecision - targetPrecision                   // The precision difference
+	multiplier := math.NewIntWithDecimal(1, precision)                // 1e${precision}
+
+	defaultGenesisAmtPlusOneTargetPrec := defaultGenesisAmtPlusOne.Mul(multiplier).String()
+	defaultGenesisAmtMinOneTargetPrec := defaultGenesisAmtMinOne.Mul(multiplier).String()
+
 	tt := []struct {
 		name      string
 		args      []string
 		err       error
+		expected  Expected
 		endpoints []testutils.HttpResponder
 	}{
-		// Perform a 1000:1 migration (1 tokens -> 1 umfx)
-		{name: "UUUPCANBKH-1", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "migrate_0_token_after_conversion", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, expected: Expected{
+			Bank: Amounts{Old: DefaultGenesisAmt},
+			User: Amounts{Old: math.ZeroInt()},
 		}, err: fmt.Errorf("amount after conversion is less than or equal to 0")},
-		// Perform a 1000:1 migration (1000 tokens -> 1 umfx)
-		{name: "UUUPCANBKH-1000", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "migrate_insufficient_funds", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1000")},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtPlusOneTargetPrec)},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, expected: Expected{
+			Bank: Amounts{Old: DefaultGenesisAmt},
+			User: Amounts{Old: math.ZeroInt()},
+		}, err: fmt.Errorf("insufficient funds")},
+		{name: "migrate_1000:1_tokens", args: slice, endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1000")}, // 1000token == 1umfx
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, expected: Expected{
+			Bank: Amounts{Old: DefaultGenesisAmt, New: defaultGenesisAmtMinOne},
+			User: Amounts{Old: math.ZeroInt(), New: math.OneInt()},
+		}},
+		{name: "migrate_all_tokens_from_bank", args: slice, endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtMinOneTargetPrec)},
+			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, expected: Expected{
+			Bank: Amounts{Old: defaultGenesisAmtMinOne, New: math.ZeroInt()},
+			User: Amounts{Old: math.OneInt(), New: DefaultGenesisAmt},
 		}},
 		// TODO: Add more test cases
 	}
 
 	for _, tc := range tt {
+		// Set up the work item
+		testutils.SetupWorkItem(t)
+		workItemPath := tmpdir + "/" + testutils.Uuid + ".json"
+
 		t.Run(tc.name, func(t *testing.T) {
 			// Register the http mock responders
 			for _, endpoint := range tc.endpoints {
@@ -92,9 +138,14 @@ func TestMigrateOnChain(t *testing.T) {
 			}
 
 			// Check the balance of the bank account pre-migration
-			balance1, err := appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+			balanceBO, err := appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
 			require.NoError(t, err)
-			require.Equal(t, balance1, DefaultGenesisAmt)
+			require.Equal(t, balanceBO, tc.expected.Bank.Old)
+
+			// Check the balance of the manifest destination account pre-migration
+			balanceUO, err := appChain.BankQueryBalance(ctx, testutils.ManifestAddress, Denom)
+			require.NoError(t, err)
+			require.Equal(t, balanceUO, tc.expected.User.Old)
 
 			// Execute the migration
 			_, err = testutils.Execute(t, command, tc.args...)
@@ -104,15 +155,22 @@ func TestMigrateOnChain(t *testing.T) {
 				require.NoError(t, err)
 
 				// Check the balance of the bank account post-migration
-				balance1, err = appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+				balanceBN, err := appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
 				require.NoError(t, err)
-				require.Equal(t, balance1, DefaultGenesisAmt.Sub(math.NewInt(1)))
+				require.Equal(t, balanceBN, tc.expected.Bank.New)
 
 				// Check the balance of the manifest destination account post-migration
-				balance2, err := appChain.BankQueryBalance(ctx, testutils.ManifestAddress, Denom)
+				balanceUN, err := appChain.BankQueryBalance(ctx, testutils.ManifestAddress, Denom)
 				require.NoError(t, err)
-				require.Equal(t, balance2, math.NewInt(1))
+				require.Equal(t, balanceUN, tc.expected.User.New)
 			}
 		})
+
+		// Remove the work item file if it exists
+		_, err = os.Stat(workItemPath)
+		if !os.IsNotExist(err) {
+			err = os.Remove(workItemPath)
+			require.NoError(t, err)
+		}
 	}
 }
