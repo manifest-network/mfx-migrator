@@ -31,6 +31,7 @@ func TestClaimCmd(t *testing.T) {
 	passwordP := []string{"--password", "pass"}
 	neighborhoodP := []string{"--neighborhood", "1"}
 
+	// TODO: Test force claim of a failed item clears the previous error
 	tt := []struct {
 		name      string
 		args      []string

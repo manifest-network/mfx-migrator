@@ -26,6 +26,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/pkg/errors"
 
 	"github.com/liftedinit/mfx-migrator/internal/utils"
 
@@ -63,14 +64,12 @@ func newClientContext(chainID, nodeAddress, keyringBackend, chainHomeDir string,
 
 	kr, err := keyring.New(sdk.KeyringServiceName(), keyringBackend, chainHomeDir, inBuf, cdc)
 	if err != nil {
-		slog.Error("Failed to create keyring", "error", err)
-		return client.Context{}, fmt.Errorf("failed to create keyring: %w", err)
+		return client.Context{}, errors.WithMessage(err, "failed to create keyring")
 	}
 
 	rClient, err := http.New(nodeAddress, "/websocket")
 	if err != nil {
-		slog.Error("Failed to create RPC client", "error", err)
-		return client.Context{}, fmt.Errorf("failed to create RPC client: %w", err)
+		return client.Context{}, errors.WithMessage(err, "failed to create RPC client")
 	}
 
 	return client.Context{}.
@@ -93,20 +92,17 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 	inBuf := bufio.NewReader(os.Stdin)
 	clientCtx, err := newClientContext(migrateConfig.ChainID, migrateConfig.NodeAddress, migrateConfig.KeyringBackend, migrateConfig.ChainHome, inBuf)
 	if err != nil {
-		slog.Error("Failed to set up client context", "error", err)
-		return nil, nil, fmt.Errorf("failed to set up client context: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to set up client context")
 	}
 
 	addr, info, err := getAccountInfo(clientCtx, migrateConfig.BankAddress)
 	if err != nil {
-		slog.Error("Failed to get account info", "error", err)
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err, "failed to get account info")
 	}
 
 	manifestAddr, err := sdk.AccAddressFromBech32(item.ManifestAddress)
 	if err != nil {
-		slog.Error("Failed to parse manifest address", "error", err)
-		return nil, nil, fmt.Errorf("failed to parse manifest address: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to parse manifest address")
 	}
 
 	msg := banktypes.NewMsgSend(addr, manifestAddr, sdk.NewCoins(sdk.NewCoin(denom, math.NewIntFromBigInt(amount))))
@@ -114,14 +110,12 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 
 	txBuilder, err := prepareTx(clientCtx, msg, item.UUID.String(), denom)
 	if err != nil {
-		slog.Error("Failed to prepare transaction", "error", err)
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err, "failed to prepare transaction")
 	}
 
 	res, blockTime, err := signAndBroadcast(clientCtx, txBuilder, migrateConfig.BankAddress, info)
 	if err != nil {
-		slog.Error("Failed to sign and broadcast transaction", "error", err)
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err, "failed to sign and broadcast transaction")
 	}
 
 	return res, blockTime, nil
@@ -131,19 +125,16 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 func getAccountInfo(ctx client.Context, bankAccount string) (sdk.AccAddress, *keyring.Record, error) {
 	info, err := ctx.Keyring.Key(bankAccount)
 	if err != nil {
-		slog.Error("Failed to fetch bank account details", "error", err)
-		return nil, nil, fmt.Errorf("failed to fetch account details: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to fetch bank account details")
 	}
 
 	addr, err := info.GetAddress()
 	if err != nil {
-		slog.Error("Failed to get bank address from key", "error", err)
-		return nil, nil, fmt.Errorf("failed to get address from key: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to get bank address from key")
 	}
 
 	if err := ctx.AccountRetriever.EnsureExists(ctx, addr); err != nil {
-		slog.Error("Failed to ensure bank account exists", "error", err)
-		return nil, nil, fmt.Errorf("failed to ensure account exists: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to ensure bank account exists")
 	}
 
 	return addr, info, nil
@@ -153,8 +144,7 @@ func getAccountInfo(ctx client.Context, bankAccount string) (sdk.AccAddress, *ke
 func prepareTx(ctx client.Context, msg sdk.Msg, memo, denom string) (client.TxBuilder, error) {
 	txBuilder := ctx.TxConfig.NewTxBuilder()
 	if err := txBuilder.SetMsgs(msg); err != nil {
-		slog.Error("Failed to set message", "error", err)
-		return nil, fmt.Errorf("failed to set message: %w", err)
+		return nil, errors.WithMessage(err, "failed to set transaction message")
 	}
 
 	txBuilder.SetMemo(memo)
@@ -177,15 +167,13 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 
 	addr, err := info.GetAddress()
 	if err != nil {
-		slog.Error("Failed to get address from key", "error", err)
-		return nil, nil, fmt.Errorf("failed to get address: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to get address from key")
 	}
 	initNum, initSeq := txFactory.AccountNumber(), txFactory.Sequence()
 	if initNum == 0 || initSeq == 0 {
 		accNum, seqNum, aErr := ctx.AccountRetriever.GetAccountNumberSequence(ctx, addr)
 		if aErr != nil {
-			slog.Error("Error getting account number sequence", "error", aErr)
-			return nil, nil, aErr
+			return nil, nil, errors.WithMessage(aErr, "failed to get account number and sequence")
 		}
 
 		if initNum == 0 {
@@ -199,21 +187,18 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 
 	// Sign the transaction
 	if tErr := tx.Sign(context.Background(), txFactory, bankAccount, txBuilder, true); tErr != nil {
-		slog.Error("Failed to sign transaction", "error", tErr)
-		return nil, nil, fmt.Errorf("failed to sign transaction: %w", tErr)
+		return nil, nil, errors.WithMessage(tErr, "failed to sign transaction")
 	}
 
 	// Broadcast the transaction
 	txBytes, err := ctx.TxConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
-		slog.Error("Failed to encode transaction", "error", err)
-		return nil, nil, fmt.Errorf("failed to encode transaction: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to encode transaction")
 	}
 
 	res, err := ctx.BroadcastTx(txBytes)
 	if err != nil {
-		slog.Error("Failed to broadcast transaction", "error", err)
-		return nil, nil, fmt.Errorf("failed to broadcast transaction: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to broadcast transaction")
 	}
 
 	slog.Info("Transaction broadcasted", "hash", res.TxHash)
@@ -221,13 +206,11 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	// Wait for the transaction to be included in a block
 	txResult, err := waitForTx(ctx.Client, res.TxHash)
 	if err != nil {
-		slog.Error("Failed to wait for transaction", "error", err)
-		return nil, nil, err
+		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
 
 	slog.Debug("Transaction result", "tx", txResult.TxResult)
 	if txResult.TxResult.Code != 0 {
-		slog.Error("Transaction failed", "code", txResult.TxResult.Code, "log", txResult.TxResult.Log)
 		return nil, nil, fmt.Errorf("transaction failed: %s", txResult.TxResult.Log)
 	}
 
@@ -235,8 +218,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 
 	txBlock, err := ctx.Client.Block(context.Background(), &txResult.Height)
 	if err != nil {
-		slog.Error("Failed to fetch block", "error", err)
-		return nil, nil, fmt.Errorf("failed to fetch block: %w", err)
+		return nil, nil, errors.WithMessage(err, "failed to fetch block")
 	}
 
 	blockTime := txBlock.Block.Time.UTC().Truncate(time.Millisecond)
@@ -248,8 +230,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 func waitForTx(rClient client.CometRPC, hash string) (*coretypes.ResultTx, error) {
 	bHash, err := hex.DecodeString(hash)
 	if err != nil {
-		slog.Error("Failed to decode hash", "error", err)
-		return nil, fmt.Errorf("failed to decode hash: %w", err)
+		return nil, errors.WithMessage(err, "failed to decode hash")
 	}
 
 	// Create a context that will be cancelled after the specified timeout
@@ -267,13 +248,11 @@ func waitForTx(rClient client.CometRPC, hash string) (*coretypes.ResultTx, error
 			if tErr != nil {
 				if strings.Contains(tErr.Error(), "not found") {
 					if cErr := waitForNextBlock(rClient); cErr != nil {
-						slog.Error("error waiting for next block", "error", cErr)
-						return nil, cErr
+						return nil, errors.WithMessage(cErr, "failed to wait for next block")
 					}
 					continue
 				}
-				slog.Error("Failed to fetch transaction", "error", tErr)
-				return nil, fmt.Errorf("error fetching transaction: %w", tErr)
+				return nil, errors.WithMessage(tErr, "error fetching transaction")
 			}
 			return r, nil
 		}
@@ -283,8 +262,7 @@ func waitForTx(rClient client.CometRPC, hash string) (*coretypes.ResultTx, error
 func getLatestBlockHeight(client client.CometRPC) (int64, error) {
 	status, err := client.Status(context.Background())
 	if err != nil {
-		slog.Error("Failed to get blockchain status", "error", err)
-		return 0, err
+		return 0, errors.WithMessage(err, "failed to get blockchain status")
 	}
 	return status.SyncInfo.LatestBlockHeight, nil
 }
@@ -298,15 +276,13 @@ func waitForBlockHeight(client client.CometRPC, height int64) error {
 		case <-ticker.C:
 			latestHeight, err := getLatestBlockHeight(client)
 			if err != nil {
-				slog.Error("Failed to get latest block height", "error", err)
-				return err
+				return errors.WithMessage(err, "failed to get latest block height")
 			}
 			if latestHeight >= height {
 				return nil
 			}
 		case <-time.After(30 * time.Second):
 			// TODO: Configure timeout
-			slog.Error("Timeout exceeded waiting for block")
 			return fmt.Errorf("timeout exceeded waiting for block")
 		}
 	}
@@ -315,8 +291,7 @@ func waitForBlockHeight(client client.CometRPC, height int64) error {
 func waitForNextBlock(client client.CometRPC) error {
 	latestHeight, err := getLatestBlockHeight(client)
 	if err != nil {
-		slog.Error("Failed to get latest block height", "error", err)
-		return err
+		return errors.WithMessage(err, "failed to get latest block height")
 	}
 	return waitForBlockHeight(client, latestHeight+1)
 }

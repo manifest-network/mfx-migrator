@@ -16,7 +16,6 @@ func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
 	status := CREATED
 	items, err := GetAllWorkItems(r, &status)
 	if err != nil {
-		slog.Error(ErrorGettingWorkItems, "error", err)
 		return nil, errors.WithMessage(err, ErrorGettingWorkItems)
 	}
 
@@ -40,7 +39,6 @@ func ClaimWorkItemFromUUID(r *resty.Client, uuid uuid.UUID, force bool) (*WorkIt
 	// 1. Get the work item from the remote database
 	item, err := GetWorkItem(r, uuid)
 	if err != nil {
-		slog.Error(ErrorGettingWorkItem, "error", err)
 		return nil, errors.WithMessage(err, ErrorGettingWorkItem)
 	}
 
@@ -57,8 +55,11 @@ func claimItem(r *resty.Client, item *WorkItem) (*WorkItem, error) {
 	// 1. Try to claim the work item
 	newItem := *item
 	newItem.Status = CLAIMED
+	if item.Error != nil {
+		slog.Info("clearing previous error", "uuid", item.UUID, "error", item.Error)
+		newItem.Error = nil
+	}
 	if err := UpdateWorkItemAndSaveState(r, newItem); err != nil {
-		slog.Error(ErrorClaimingWorkItem, "error", err)
 		return nil, errors.WithMessage(err, ErrorClaimingWorkItem)
 	}
 

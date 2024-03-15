@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/pkg/errors"
 
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
@@ -43,18 +44,15 @@ func AuthenticateRestClient(r *resty.Client, username, password string) error {
 		SetResult(&store.Token{}).
 		Post("/auth/login")
 	if err != nil {
-		slog.Error("could not login", "error", err)
-		return err
+		return errors.WithMessage(err, "could not login")
 	}
 
 	token := response.Result().(*store.Token)
 	if token == nil {
-		slog.Error("no token returned")
 		return fmt.Errorf("no token returned")
 	}
 
 	if token.AccessToken == "" {
-		slog.Error("empty token returned")
 		return fmt.Errorf("empty token returned")
 	}
 

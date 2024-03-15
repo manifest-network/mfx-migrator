@@ -129,7 +129,8 @@ func TestMigrateOnChain(t *testing.T) {
 	for _, tc := range tt {
 		// Set up the work item
 		testutils.SetupWorkItem(t)
-		workItemPath := tmpdir + "/" + testutils.Uuid + ".json"
+		workItemPath := tmpdir + "/" + testutils.Uuid
+		workItemPathJson := workItemPath + ".json"
 
 		t.Run(tc.name, func(t *testing.T) {
 			// Register the http mock responders
@@ -151,6 +152,12 @@ func TestMigrateOnChain(t *testing.T) {
 			_, err = testutils.Execute(t, command, tc.args...)
 			if tc.err != nil {
 				require.ErrorContains(t, err, tc.err.Error())
+
+				// Check the status of the local work item
+				item, err := store.LoadState(workItemPath)
+				require.NoError(t, err)
+				require.Equal(t, item.Status, store.FAILED)
+				require.Contains(t, *item.Error, tc.err.Error())
 			} else {
 				require.NoError(t, err)
 
@@ -167,9 +174,9 @@ func TestMigrateOnChain(t *testing.T) {
 		})
 
 		// Remove the work item file if it exists
-		_, err = os.Stat(workItemPath)
+		_, err = os.Stat(workItemPathJson)
 		if !os.IsNotExist(err) {
-			err = os.Remove(workItemPath)
+			err = os.Remove(workItemPathJson)
 			require.NoError(t, err)
 		}
 	}

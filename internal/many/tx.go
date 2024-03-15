@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
 type Arguments struct {
@@ -24,13 +25,11 @@ func GetTxInfo(r *resty.Client, hash string) (*TxInfo, error) {
 	req := r.R().SetPathParam("thash", hash).SetResult(&TxInfo{})
 	resp, err := req.Get("neighborhoods/{neighborhood}/transactions/{thash}")
 	if err != nil {
-		slog.Error("Error getting MANY tx info", "error", err)
-		return nil, err
+		return nil, errors.WithMessage(err, "error getting MANY tx info")
 	}
 
 	txInfo := resp.Result().(*TxInfo)
 	if txInfo == nil || (txInfo != nil && txInfo.Arguments.From == "") {
-		slog.Error("Error unmarshalling MANY tx info")
 		return nil, fmt.Errorf("error unmarshalling MANY tx info")
 	}
 	slog.Debug("MANY tx info", "txInfo", txInfo)
@@ -51,7 +50,7 @@ func CheckTxInfo(txInfo *TxInfo, itemUUID uuid.UUID, manifestAddr string) error 
 	// Check the MANY transaction UUID
 	txUUID, err := uuid.Parse(txInfo.Arguments.Memo[0])
 	if err != nil {
-		return fmt.Errorf("invalid MANY tx UUID: %s", txInfo.Arguments.Memo[0])
+		return errors.WithMessagef(err, "invalid MANY tx UUID: %s", txInfo.Arguments.Memo[0])
 	}
 
 	// Check the Manifest destination address

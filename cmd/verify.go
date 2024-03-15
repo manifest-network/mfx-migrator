@@ -18,7 +18,6 @@ var verifyCmd = &cobra.Command{
 		urlStr := viper.GetString("url")
 		uuidStr := viper.GetString("verify-uuid")
 		if uuidStr == "" {
-			slog.Error("uuid is required")
 			return fmt.Errorf("uuid is required")
 		}
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -80,8 +81,7 @@ func claimWorkItem(r *resty.Client, uuidStr string, force bool) (*store.WorkItem
 
 	// An error occurred during the claim
 	if err != nil {
-		slog.Error("could not claim work item", "error", err)
-		return nil, err
+		return nil, errors.WithMessage(err, "could not claim work item")
 	} else {
 		slog.Info("Work item claimed", "uuid", item.UUID)
 	}

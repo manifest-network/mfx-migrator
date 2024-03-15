@@ -2,7 +2,6 @@ package store
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-resty/resty/v2"
@@ -43,25 +42,21 @@ func updateWorkItem(r *resty.Client, item WorkItem) error {
 		SetResult(&WorkItemUpdateResponse{})
 	response, err := req.Put("neighborhoods/{neighborhood}/migrations/{uuid}")
 	if err != nil {
-		slog.Error("error updating work item", "error", err)
-		return err
+		return errors.WithMessage(err, "error updating work item")
 	}
 
 	if response == nil {
-		slog.Error("no response returned when claiming work item")
 		return fmt.Errorf("no response returned when claiming work item: %s", item.UUID)
 	}
 
 	statusCode := response.StatusCode()
 	if statusCode != http.StatusOK {
-		slog.Error("response status code", "code", statusCode)
 		return fmt.Errorf("response status code: %d", statusCode)
 	}
 
 	// 3. Unmarshal the update response
 	updateResponse := response.Result().(*WorkItemUpdateResponse)
 	if updateResponse == nil {
-		slog.Error("error unmarshalling update response")
 		return fmt.Errorf("error unmarshalling update response")
 	}
 
@@ -70,7 +65,6 @@ func updateWorkItem(r *resty.Client, item WorkItem) error {
 		utils.EqualTimePtr(updateResponse.ManifestDatetime, item.ManifestDatetime) &&
 		utils.EqualStringPtr(updateResponse.ManifestHash, item.ManifestHash) &&
 		utils.EqualStringPtr(updateResponse.Error, item.Error)) {
-		slog.Error("work item not updated", "item", item)
 		return fmt.Errorf("work item not updated: %v", item)
 	}
 
