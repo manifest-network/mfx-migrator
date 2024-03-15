@@ -2,7 +2,6 @@ package interchaintest
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -83,11 +82,11 @@ func TestMigrateOnChain(t *testing.T) {
 	tt := []struct {
 		name      string
 		args      []string
-		err       error
+		err       string
 		expected  Expected
 		endpoints []testutils.HttpResponder
 	}{
-		{name: "migrate_0_token_after_conversion", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "0 token after conversion", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1")},
@@ -95,8 +94,8 @@ func TestMigrateOnChain(t *testing.T) {
 		}, expected: Expected{
 			Bank: Amounts{Old: DefaultGenesisAmt},
 			User: Amounts{Old: math.ZeroInt()},
-		}, err: fmt.Errorf("amount after conversion is less than or equal to 0")},
-		{name: "migrate_insufficient_funds", args: slice, endpoints: []testutils.HttpResponder{
+		}, err: "amount after conversion is less than or equal to 0"},
+		{name: "insufficient funds", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtPlusOneTargetPrec)},
@@ -104,17 +103,17 @@ func TestMigrateOnChain(t *testing.T) {
 		}, expected: Expected{
 			Bank: Amounts{Old: DefaultGenesisAmt},
 			User: Amounts{Old: math.ZeroInt()},
-		}, err: fmt.Errorf("insufficient funds")},
-		{name: "migrate_1000:1_tokens", args: slice, endpoints: []testutils.HttpResponder{
+		}, err: "insufficient funds"},
+		{name: "1000:1 tokens", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1000")}, // 1000token == 1umfx
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1000")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
 			Bank: Amounts{Old: DefaultGenesisAmt, New: defaultGenesisAmtMinOne},
 			User: Amounts{Old: math.ZeroInt(), New: math.OneInt()},
 		}},
-		{name: "migrate_all_tokens_from_bank", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "all tokens from bank", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtMinOneTargetPrec)},
@@ -150,14 +149,14 @@ func TestMigrateOnChain(t *testing.T) {
 
 			// Execute the migration
 			_, err = testutils.Execute(t, command, tc.args...)
-			if tc.err != nil {
-				require.ErrorContains(t, err, tc.err.Error())
+			if tc.err != "" {
+				require.ErrorContains(t, err, tc.err)
 
 				// Check the status of the local work item
 				item, err := store.LoadState(workItemPath)
 				require.NoError(t, err)
 				require.Equal(t, item.Status, store.FAILED)
-				require.Contains(t, *item.Error, tc.err.Error())
+				require.Contains(t, *item.Error, tc.err)
 			} else {
 				require.NoError(t, err)
 

@@ -82,7 +82,9 @@ func claimWorkItem(r *resty.Client, uuidStr string, force bool) (*store.WorkItem
 	// An error occurred during the claim
 	if err != nil {
 		return nil, errors.WithMessage(err, "could not claim work item")
-	} else {
+	}
+
+	if item != nil {
 		slog.Info("Work item claimed", "uuid", item.UUID)
 	}
 

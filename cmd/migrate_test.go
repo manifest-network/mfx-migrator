@@ -2,7 +2,6 @@ package cmd_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -37,19 +36,19 @@ func TestMigrateCmd(t *testing.T) {
 	tt := []struct {
 		name string
 		args []string
-		err  error
+		err  string
 		out  string
 	}{
-		{name: "no arg", args: []string{}, err: fmt.Errorf("URL cannot be empty")},
-		{name: "U", args: append(slice, urlP...), err: fmt.Errorf("required flag(s) \"uuid\" not set")},
-		{name: "UU", args: append(slice, uuidP...), err: fmt.Errorf("username is required")},
-		{name: "UUU", args: append(slice, usernameP...), err: fmt.Errorf("password is required")},
-		{name: "UUUP", args: append(slice, passwordP...), err: fmt.Errorf("chain ID is required")},
-		{name: "UUUPC", args: append(slice, chainIdP...), err: fmt.Errorf("address prefix is required")},
-		{name: "UUUPCA", args: append(slice, addressPrefixP...), err: fmt.Errorf("node address is required")},
-		{name: "UUUPCAN", args: append(slice, nodeAddressP...), err: fmt.Errorf("keyring backend is required")},
-		{name: "UUUPCANB", args: append(slice, keyringBackendP...), err: fmt.Errorf("bank address is required")},
-		{name: "UUUPCANBK", args: append(slice, bankAddressP...), err: fmt.Errorf("chain home is required")},
+		{name: "no argument", args: []string{}, err: "URL cannot be empty"},
+		{name: "uuid missing", args: append(slice, urlP...), err: "required flag(s) \"uuid\" not set"},
+		{name: "username missing", args: append(slice, uuidP...), err: "username is required"},
+		{name: "password missing", args: append(slice, usernameP...), err: "password is required"},
+		{name: "chain id missing", args: append(slice, passwordP...), err: "chain ID is required"},
+		{name: "address prefix missing", args: append(slice, chainIdP...), err: "address prefix is required"},
+		{name: "node address missing", args: append(slice, addressPrefixP...), err: "node address is required"},
+		{name: "keyring backend missing", args: append(slice, nodeAddressP...), err: "keyring backend is required"},
+		{name: "bank address missing", args: append(slice, keyringBackendP...), err: "bank address is required"},
+		{name: "chain home missing", args: append(slice, bankAddressP...), err: "chain home is required"},
 	}
 
 	command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
@@ -69,13 +68,8 @@ func TestMigrateCmd(t *testing.T) {
 	for _, tc := range tt {
 		slice = append(slice, tc.args...)
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := testutils.Execute(t, command, tc.args...)
-
-			require.ErrorContains(t, err, tc.err.Error())
-
-			if tc.err == nil {
-				require.Equal(t, tc.out, out)
-			}
+			_, err := testutils.Execute(t, command, tc.args...)
+			require.ErrorContains(t, err, tc.err)
 		})
 	}
 }

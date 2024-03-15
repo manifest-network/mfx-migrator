@@ -47,6 +47,15 @@ func AuthenticateRestClient(r *resty.Client, username, password string) error {
 		return errors.WithMessage(err, "could not login")
 	}
 
+	if response == nil {
+		return fmt.Errorf("no response returned when logging in")
+	}
+
+	statusCode := response.StatusCode()
+	if statusCode != 200 {
+		return fmt.Errorf("response status code: %d", statusCode)
+	}
+
 	token := response.Result().(*store.Token)
 	if token == nil {
 		return fmt.Errorf("no token returned")

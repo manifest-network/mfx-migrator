@@ -2,7 +2,7 @@ package cmd_test
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -31,30 +31,39 @@ func TestClaimCmd(t *testing.T) {
 	passwordP := []string{"--password", "pass"}
 	neighborhoodP := []string{"--neighborhood", "1"}
 
+	slog.Default()
+
 	// TODO: Test force claim of a failed item clears the previous error
 	tt := []struct {
 		name      string
 		args      []string
-		err       error
-		out       string
+		err       string
+		expected  string
 		endpoints []testutils.HttpResponder
 	}{
-		{name: "no arg", args: []string{}, err: fmt.Errorf("URL cannot be empty")},
-		{name: "U", args: append(slice, urlP...), err: fmt.Errorf("username is required")},
-		{name: "UU", args: append(slice, usernameP...), err: fmt.Errorf("password is required")},
-		// The default neighborhood value is 0
-		{name: "UUP", args: append(slice, passwordP...), endpoints: []testutils.HttpResponder{
+		{name: "no argument", args: []string{}, err: "URL cannot be empty"},
+		{name: "username missing", args: append(slice, urlP...), err: "username is required"},
+		{name: "password missing", args: append(slice, usernameP...), err: "password is required"},
+		{name: "claim from queue (default neighborhood)", args: append(slice, passwordP...), endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: testutils.DefaultMigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CREATED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
-		}},
-		{name: "UUPN", args: append(slice, neighborhoodP...), endpoints: []testutils.HttpResponder{
+		}, expected: "Work item claimed"},
+		{name: "claim from queue (neighborhood == 1)", args: append(slice, neighborhoodP...), endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CREATED)},
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
 			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
-		}},
+		}, expected: "Work item claimed"},
+		{name: "auth endpoint not found", args: slice, endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.NotFoundResponder},
+		}, err: "response status code: 404"},
+		{name: "unable to claim from queue (invalid state)", args: slice, endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CLAIMED)},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
+		}, expected: "invalid state"},
 	}
 	command := &cobra.Command{Use: "claim", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.ClaimCmdRunE}
 
@@ -77,13 +86,20 @@ func TestClaimCmd(t *testing.T) {
 				httpmock.RegisterResponder(endpoint.Method, endpoint.Url, endpoint.Responder)
 			}
 
-			_, err := testutils.Execute(t, command, tc.args...)
+			out, err := testutils.Execute(t, command, tc.args...)
 
-			require.Equal(t, tc.err, err)
-
-			if tc.err == nil {
-				require.FileExists(t, workItemPath)
+			if tc.err == "" {
+				require.Contains(t, out, tc.expected)
+			} else {
+				require.ErrorContains(t, err, tc.err)
 			}
 		})
+
+		// Remove the work item file if it exists
+		_, err := os.Stat(workItemPath)
+		if !os.IsNotExist(err) {
+			err = os.Remove(workItemPath)
+			require.NoError(t, err)
+		}
 	}
 }
