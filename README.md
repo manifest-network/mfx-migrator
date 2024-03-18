@@ -66,6 +66,20 @@ Flags:
 
 This command triggers a token transaction on the MANIFEST chain and updates the work item status in the remote database.
 
+## Verify a work item
+
+To verify a work item, run the following command:
+
+```bash
+mfx-migrator verify [UUID]
+```
+where `[UUID]` is the UUID of the work item.
+
+Flags:
+- `--uuid string` - The UUID of the work item to verify. Default is an empty string.
+
+This command verifies the status of the work item in the remote database.
+
 # Developers
 
 Use the provided `Makefile` to execute common operations
