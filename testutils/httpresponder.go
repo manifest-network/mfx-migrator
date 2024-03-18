@@ -13,6 +13,8 @@ import (
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
+// TODO: Randomize parameters. Fuzzy testing.
+
 const (
 	Uuid            = "5aa19d2a-4bdf-4687-a850-1804756b3f1f"
 	ManyFrom        = "maffbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wijp"
@@ -31,7 +33,6 @@ type HttpResponder struct {
 
 var AuthResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]string{"access_token": "ya29.Gl0UBZ3"})
 
-// TODO: Random
 func MustNewTransactionResponseResponder(amount string) httpmock.Responder {
 	response := many.TxInfo{Arguments: many.Arguments{
 		From:   ManyFrom,
@@ -47,7 +48,6 @@ func MustNewTransactionResponseResponder(amount string) httpmock.Responder {
 	return transactionResponseResponder
 }
 
-// TODO: Random
 func MustAllMigrationsGetResponder(nb uint, status store.WorkItemStatus) httpmock.Responder {
 	if nb > 1 {
 		panic("nb must be <= 1")
@@ -86,7 +86,6 @@ func MustAllMigrationsGetResponder(nb uint, status store.WorkItemStatus) httpmoc
 var NotFoundResponder, _ = httpmock.NewJsonResponder(http.StatusNotFound, nil)
 var GarbageResponder, _ = httpmock.NewJsonResponder(http.StatusOK, "{\"foo\": \"bar\"")
 
-// TODO: Random
 func MustMigrationGetResponder(status store.WorkItemStatus) httpmock.Responder {
 	var failedErr *string
 	sErr := "some error"

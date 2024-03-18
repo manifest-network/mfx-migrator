@@ -122,7 +122,6 @@ func TestMigrateOnChain(t *testing.T) {
 			Bank: Amounts{Old: defaultGenesisAmtMinOne, New: math.ZeroInt()},
 			User: Amounts{Old: math.OneInt(), New: DefaultGenesisAmt},
 		}},
-		// TODO: Add more test cases
 	}
 
 	for _, tc := range tt {

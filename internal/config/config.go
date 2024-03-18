@@ -1,11 +1,10 @@
-package cmd
+package config
 
 import (
 	"fmt"
 	"net/url"
 
 	"github.com/google/uuid"
-	"github.com/spf13/viper"
 
 	"github.com/liftedinit/mfx-migrator/internal/utils"
 )
@@ -45,18 +44,6 @@ func (c Config) Validate() error {
 	return nil
 }
 
-// LoadConfigFromCLI loads the Config from the CLI flags
-//
-// `uuidKey` is the name of the viper key that holds the UUID
-// This is necessary because the UUID is used in multiple commands
-func LoadConfigFromCLI(uuidKey string) Config {
-	return Config{
-		UUID:         viper.GetString(uuidKey),
-		Url:          viper.GetString("url"),
-		Neighborhood: viper.GetUint64("neighborhood"),
-	}
-}
-
 type AuthConfig struct {
 	Username string // The username to authenticate with
 	Password string // The password to authenticate with
@@ -78,47 +65,20 @@ func (c AuthConfig) Validate() error {
 	return nil
 }
 
-func LoadAuthConfigFromCLI() AuthConfig {
-	return AuthConfig{
-		Username: viper.GetString("username"),
-		Password: viper.GetString("password"),
-	}
-}
-
 type ClaimConfig struct {
 	Force bool // Force re-claiming of a failed work item
 }
 
-func LoadClaimConfigFromCLI() ClaimConfig {
-	return ClaimConfig{
-		Force: viper.GetBool("force"),
-	}
-}
-
 type MigrateConfig struct {
-	ChainID        string                     // The destination chain ID
-	AddressPrefix  string                     // The destination address prefix
-	NodeAddress    string                     // The destination RPC node address
-	KeyringBackend string                     // The destination chain keyring backend to use
-	BankAddress    string                     // The destination chain address of the bank account to send tokens from
-	ChainHome      string                     // The root directory of the destination chain configuration
-	TokenMap       map[string]utils.TokenInfo // Map of source token address to destination token info
-}
-
-func LoadMigrationConfigFromCLI() MigrateConfig {
-	var tokenMap map[string]utils.TokenInfo
-	if err := viper.UnmarshalKey("token-map", &tokenMap); err != nil {
-		panic(err)
-	}
-	return MigrateConfig{
-		ChainID:        viper.GetString("chain-id"),
-		AddressPrefix:  viper.GetString("address-prefix"),
-		NodeAddress:    viper.GetString("node-address"),
-		KeyringBackend: viper.GetString("keyring-backend"),
-		BankAddress:    viper.GetString("bank-address"),
-		ChainHome:      viper.GetString("chain-home"),
-		TokenMap:       tokenMap,
-	}
+	ChainID          string                     // The destination chain ID
+	AddressPrefix    string                     // The destination address prefix
+	NodeAddress      string                     // The destination RPC node address
+	KeyringBackend   string                     // The destination chain keyring backend to use
+	BankAddress      string                     // The destination chain address of the bank account to send tokens from
+	ChainHome        string                     // The root directory of the destination chain configuration
+	TokenMap         map[string]utils.TokenInfo // Map of source token address to destination token info
+	WaitTxTimeout    uint                       // Number of seconds spent waiting for the transaction to be included in a block
+	WaitBlockTimeout uint                       // Number of seconds spent waiting for the block to be committed
 }
 
 func (c MigrateConfig) Validate() error {
@@ -144,6 +104,14 @@ func (c MigrateConfig) Validate() error {
 
 	if c.ChainHome == "" {
 		return fmt.Errorf("chain home is required")
+	}
+
+	if c.WaitTxTimeout == 0 {
+		return fmt.Errorf("wait for tx timeout > 0 is required")
+	}
+
+	if c.WaitBlockTimeout == 0 {
+		return fmt.Errorf("wait for block timeout > 0 is required")
 	}
 
 	return nil

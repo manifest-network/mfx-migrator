@@ -28,22 +28,10 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/pkg/errors"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
+	"github.com/liftedinit/mfx-migrator/internal/config"
 
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
-
-// TODO: Refactor & Cleanup
-
-type MigrationConfig struct {
-	ChainID        string
-	NodeAddress    string
-	KeyringBackend string
-	ChainHome      string
-	AddressPrefix  string
-	BankAddress    string
-	TokenMap       map[string]utils.TokenInfo
-}
 
 const defaultGasLimit uint64 = 200000
 
@@ -85,9 +73,9 @@ func newClientContext(chainID, nodeAddress, keyringBackend, chainHomeDir string,
 }
 
 // Migrate migrates the given amount of tokens to the specified address.
-func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, amount *big.Int) (*sdk.TxResponse, *time.Time, error) {
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(migrateConfig.AddressPrefix, migrateConfig.AddressPrefix+"pub")
+func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom string, amount *big.Int) (*sdk.TxResponse, *time.Time, error) {
+	c := sdk.GetConfig()
+	c.SetBech32PrefixForAccount(migrateConfig.AddressPrefix, migrateConfig.AddressPrefix+"pub")
 
 	inBuf := bufio.NewReader(os.Stdin)
 	clientCtx, err := newClientContext(migrateConfig.ChainID, migrateConfig.NodeAddress, migrateConfig.KeyringBackend, migrateConfig.ChainHome, inBuf)
@@ -113,7 +101,7 @@ func Migrate(item *store.WorkItem, migrateConfig MigrationConfig, denom string, 
 		return nil, nil, errors.WithMessage(err, "failed to prepare transaction")
 	}
 
-	res, blockTime, err := signAndBroadcast(clientCtx, txBuilder, migrateConfig.BankAddress, info)
+	res, blockTime, err := signAndBroadcast(clientCtx, txBuilder, migrateConfig.BankAddress, info, migrateConfig.WaitTxTimeout, migrateConfig.WaitBlockTimeout)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to sign and broadcast transaction")
 	}
@@ -155,7 +143,7 @@ func prepareTx(ctx client.Context, msg sdk.Msg, memo, denom string) (client.TxBu
 }
 
 // signAndBroadcast signs and broadcasts the transaction, returning the transaction response and block time.
-func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccount string, info *keyring.Record) (*sdk.TxResponse, *time.Time, error) {
+func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccount string, info *keyring.Record, waitForTxTimeout, blockTimeout uint) (*sdk.TxResponse, *time.Time, error) {
 	txFactory := tx.Factory{}.
 		WithChainID(ctx.ChainID).
 		WithKeybase(ctx.Keyring).
@@ -204,7 +192,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 	slog.Info("Transaction broadcasted", "hash", res.TxHash)
 
 	// Wait for the transaction to be included in a block
-	txResult, err := waitForTx(ctx.Client, res.TxHash)
+	txResult, err := waitForTx(ctx.Client, res.TxHash, waitForTxTimeout, blockTimeout)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
@@ -227,15 +215,14 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 }
 
 // waitForTx waits for a transaction to be included in a block.
-func waitForTx(rClient client.CometRPC, hash string) (*coretypes.ResultTx, error) {
+func waitForTx(rClient client.CometRPC, hash string, txTimeout, blockTimeout uint) (*coretypes.ResultTx, error) {
 	bHash, err := hex.DecodeString(hash)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to decode hash")
 	}
 
 	// Create a context that will be cancelled after the specified timeout
-	// TODO: Configure timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(txTimeout)*time.Second)
 	defer cancel()
 
 	for {
@@ -247,7 +234,7 @@ func waitForTx(rClient client.CometRPC, hash string) (*coretypes.ResultTx, error
 			r, tErr := rClient.Tx(context.Background(), bHash, false)
 			if tErr != nil {
 				if strings.Contains(tErr.Error(), "not found") {
-					if cErr := waitForNextBlock(rClient); cErr != nil {
+					if cErr := waitForNextBlock(rClient, blockTimeout); cErr != nil {
 						return nil, errors.WithMessage(cErr, "failed to wait for next block")
 					}
 					continue
@@ -267,7 +254,7 @@ func getLatestBlockHeight(client client.CometRPC) (int64, error) {
 	return status.SyncInfo.LatestBlockHeight, nil
 }
 
-func waitForBlockHeight(client client.CometRPC, height int64) error {
+func waitForBlockHeight(client client.CometRPC, height int64, timeout uint) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -281,17 +268,16 @@ func waitForBlockHeight(client client.CometRPC, height int64) error {
 			if latestHeight >= height {
 				return nil
 			}
-		case <-time.After(30 * time.Second):
-			// TODO: Configure timeout
+		case <-time.After(time.Duration(timeout) * time.Second):
 			return fmt.Errorf("timeout exceeded waiting for block")
 		}
 	}
 }
 
-func waitForNextBlock(client client.CometRPC) error {
+func waitForNextBlock(client client.CometRPC, timeout uint) error {
 	latestHeight, err := getLatestBlockHeight(client)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get latest block height")
 	}
-	return waitForBlockHeight(client, latestHeight+1)
+	return waitForBlockHeight(client, latestHeight+1, timeout)
 }

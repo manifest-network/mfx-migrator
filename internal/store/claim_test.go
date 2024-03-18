@@ -30,7 +30,6 @@ func TestStore_Claim(t *testing.T) {
 	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", testutils.Neighborhood)
 	httpmock.ActivateNonDefault(rClient.GetClient())
 
-	// TODO: Test force claim of a failed item clears the previous error
 	var tests = []testCase{
 		// Successfully claim a work item from the queue
 		{"success_queue", []testutils.HttpResponder{

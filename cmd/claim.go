@@ -28,27 +28,27 @@ Trying to claim a work item that is already failed should return an error, unles
 }
 
 func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
-	config := LoadConfigFromCLI("claim-uuid")
-	slog.Debug("args", "config", config)
-	if err := config.Validate(); err != nil {
+	c := LoadConfigFromCLI("claim-uuid")
+	slog.Debug("args", "c", c)
+	if err := c.Validate(); err != nil {
 		return err
 	}
 
 	claimConfig := LoadClaimConfigFromCLI()
-	slog.Debug("args", "claim-config", claimConfig)
+	slog.Debug("args", "claim-c", claimConfig)
 
 	authConfig := LoadAuthConfigFromCLI()
-	slog.Debug("args", "auth-config", authConfig)
+	slog.Debug("args", "auth-c", authConfig)
 	if err := authConfig.Validate(); err != nil {
 		return err
 	}
 
-	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
+	r := CreateRestClient(cmd.Context(), c.Url, c.Neighborhood)
 	if err := AuthenticateRestClient(r, authConfig.Username, authConfig.Password); err != nil {
 		return err
 	}
 
-	item, err := claimWorkItem(r, config.UUID, claimConfig.Force)
+	item, err := claimWorkItem(r, c.UUID, claimConfig.Force)
 	if err != nil {
 		return err
 	}
