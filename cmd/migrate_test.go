@@ -21,17 +21,19 @@ func TestMigrateCmd(t *testing.T) {
 
 	testutils.SetupWorkItem(t)
 
-	urlP := []string{"--url", testutils.RootUrl}
-	uuidP := []string{"--uuid", testutils.DummyUUIDStr}
-	usernameP := []string{"--username", "user"}
-	passwordP := []string{"--password", "pass"}
-	chainIdP := []string{"--chain-id", "my-chain"}
-	addressPrefixP := []string{"--address-prefix", "manifest"}
-	nodeAddressP := []string{"--node-address", "http://localhost:26657"}
-	keyringBackendP := []string{"--keyring-backend", "test"}
-	bankAddressP := []string{"--bank-address", "alice"}
-
 	var slice []string
+	urlArg := append(slice, []string{"--url", testutils.RootUrl}...)
+	uuidArg := append(urlArg, []string{"--uuid", testutils.DummyUUIDStr}...)
+	usernameArg := append(uuidArg, []string{"--username", "user"}...)
+	passwordArg := append(usernameArg, []string{"--password", "pass"}...)
+
+	pp := make([]string, len(passwordArg))
+	copy(pp, passwordArg)
+	chainIdArg := append(pp, []string{"--chain-id", ""}...)
+	addressPrefixArg := append(pp, []string{"--address-prefix", ""}...)
+	nodeAddressArg := append(pp, []string{"--node-address", ""}...)
+	keyringBackendArg := append(pp, []string{"--keyring-backend", ""}...)
+	bankAddressArg := append(pp, []string{"--bank-address", ""}...)
 
 	tt := []struct {
 		name string
@@ -40,33 +42,34 @@ func TestMigrateCmd(t *testing.T) {
 		out  string
 	}{
 		{name: "no argument", args: []string{}, err: "URL cannot be empty"},
-		{name: "uuid missing", args: append(slice, urlP...), err: "required flag(s) \"uuid\" not set"},
-		{name: "username missing", args: append(slice, uuidP...), err: "username is required"},
-		{name: "password missing", args: append(slice, usernameP...), err: "password is required"},
-		{name: "chain id missing", args: append(slice, passwordP...), err: "chain ID is required"},
-		{name: "address prefix missing", args: append(slice, chainIdP...), err: "address prefix is required"},
-		{name: "node address missing", args: append(slice, addressPrefixP...), err: "node address is required"},
-		{name: "keyring backend missing", args: append(slice, nodeAddressP...), err: "keyring backend is required"},
-		{name: "bank address missing", args: append(slice, keyringBackendP...), err: "bank address is required"},
-		{name: "chain home missing", args: append(slice, bankAddressP...), err: "chain home is required"},
+		{name: "uuid missing", args: urlArg, err: "required flag(s) \"uuid\" not set"},
+		{name: "username missing", args: uuidArg, err: "username is required"},
+		{name: "password missing", args: usernameArg, err: "password is required"},
+		{name: "chain home missing", args: passwordArg, err: "chain home is required"},
+
+		// Set defaults to empty strings
+		{name: "chain id missing", args: chainIdArg, err: "chain ID is required"},
+		{name: "address prefix missing", args: addressPrefixArg, err: "address prefix is required"},
+		{name: "node address missing", args: nodeAddressArg, err: "node address is required"},
+		{name: "keyring backend missing", args: keyringBackendArg, err: "keyring backend is required"},
+		{name: "bank address missing", args: bankAddressArg, err: "bank address is required"},
 	}
 
-	command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
-
-	// Create a new resty client and inject it into the command context
-	client := resty.New()
-	ctx := context.WithValue(context.Background(), cmd.RestyClientKey, client)
-	command.SetContext(ctx)
-
-	// Enable http mocking on the resty client
-	httpmock.ActivateNonDefault(client.GetClient())
-	defer httpmock.DeactivateAndReset()
-
-	cmd.SetupRootCmdFlags(command)
-	cmd.SetupMigrateCmdFlags(command)
-
 	for _, tc := range tt {
-		slice = append(slice, tc.args...)
+		command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
+
+		// Create a new resty client and inject it into the command context
+		client := resty.New()
+		ctx := context.WithValue(context.Background(), cmd.RestyClientKey, client)
+		command.SetContext(ctx)
+
+		// Enable http mocking on the resty client
+		httpmock.ActivateNonDefault(client.GetClient())
+		defer httpmock.DeactivateAndReset()
+
+		cmd.SetupRootCmdFlags(command)
+		cmd.SetupMigrateCmdFlags(command)
+
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := testutils.Execute(t, command, tc.args...)
 			require.ErrorContains(t, err, tc.err)
