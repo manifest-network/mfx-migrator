@@ -4,6 +4,33 @@ help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 .PHONY: help
 
+#### BUILD ####
+
+build: ## Build the project
+	@echo "--> Building project"
+	@go build -o mfx-migrator ./
+	@echo "--> Building project complete"
+
+.PHONY: build
+
+#### CLEAN ####
+
+clean: ## Clean the project
+	@echo "--> Cleaning project"
+	@go clean
+	@echo "--> Cleaning project complete"
+
+.PHONY: clean
+
+#### INSTALL ####
+
+install: ## Install the project
+	@echo "--> Installing project"
+	@go install
+	@echo "--> Installing project complete"
+
+.PHONY: install
+
 #### LINT ####
 
 golangci_version=latest

@@ -93,20 +93,21 @@ func SetupMigrateCmdFlags(command *cobra.Command) {
 	args := []struct {
 		name     string
 		key      string
+		value    string
 		usage    string
 		required bool
 	}{
-		{"chain-id", "chain-id", "Chain ID of the blockchain to migrate to", false},
-		{"address-prefix", "address-prefix", "Address prefix of the blockchain to migrate to", false},
-		{"node-address", "node-address", "Node address of the blockchain to migrate to", false},
-		{"keyring-backend", "keyring-backend", "Keyring backend to use", false},
-		{"bank-address", "bank-address", "Bank address to send tokens from", false},
-		{"chain-home", "chain-home", "Root directory of the chain configuration", false},
-		{"uuid", "migrate-uuid", "UUID of the work item to claim", true},
+		{"chain-id", "chain-id", "manifest-1", "Chain ID of the blockchain to migrate to", false},
+		{"address-prefix", "address-prefix", "manifest", "Address prefix of the blockchain to migrate to", false},
+		{"node-address", "node-address", "http://localhost:26657", "Node address of the blockchain to migrate to", false},
+		{"keyring-backend", "keyring-backend", "test", "Keyring backend to use", false},
+		{"bank-address", "bank-address", "bank", "Bank address to send tokens from", false},
+		{"chain-home", "chain-home", "", "Root directory of the chain configuration", false},
+		{"uuid", "migrate-uuid", "", "UUID of the work item to migrate", true},
 	}
 
 	for _, arg := range args {
-		command.Flags().String(arg.name, "", arg.usage)
+		command.Flags().String(arg.name, arg.value, arg.usage)
 		if err := viper.BindPFlag(arg.key, command.Flags().Lookup(arg.name)); err != nil {
 			slog.Error(ErrorBindingFlag, "error", err)
 		}
