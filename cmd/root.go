@@ -38,12 +38,13 @@ func RootCmdPersistentPreRunE(cmd *cobra.Command, args []string) error {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		slog.Info("Using config file", "file", viper.ConfigFileUsed())
 	} else {
-		fmt.Println("No config file found")
+		slog.Info("No config file found")
 	}
 
 	if err := rootCmd.Execute(); err != nil {
+		slog.Error("An error occurred", "error", err)
 		os.Exit(1)
 	}
 }
@@ -83,6 +84,9 @@ func SetupRootCmdFlags(command *cobra.Command) {
 	if err := viper.BindPFlag("password", command.PersistentFlags().Lookup("password")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
+
+	command.SilenceUsage = true
+	command.SilenceErrors = true
 }
 
 func init() {

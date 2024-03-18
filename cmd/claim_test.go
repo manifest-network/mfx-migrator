@@ -30,7 +30,6 @@ func TestClaimCmd(t *testing.T) {
 	passwordArg := append(usernameArg, []string{"--password", "pass"}...)
 	neighborhoodArg := append(passwordArg, []string{"--neighborhood", "1"}...)
 
-	// TODO: Test force claim of a failed item clears the previous error
 	tt := []struct {
 		name      string
 		args      []string
@@ -61,6 +60,28 @@ func TestClaimCmd(t *testing.T) {
 			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 		}, expected: "invalid state"},
+		{name: "unable to claim from queue (no work items available)", args: neighborhoodArg, endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(0, store.CREATED)},
+		}, expected: "No work items available"},
+		{name: "claim from uuid", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr}...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, expected: "Work item claimed"},
+		{name: "unable to claim from uuid (invalid state)", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr}...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
+		}, err: "invalid state"},
+		{name: "unable to claim from uuid (not found)", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr}...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.NotFoundResponder},
+		}, err: "response status code: 404"},
+		{name: "force claim from uuid", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr, "--force"}...), endpoints: []testutils.HttpResponder{
+			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.FAILED)},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, expected: "forcing re-claim of work item"},
 	}
 	for _, tc := range tt {
 		command := &cobra.Command{Use: "claim", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.ClaimCmdRunE}
@@ -83,6 +104,7 @@ func TestClaimCmd(t *testing.T) {
 			}
 
 			out, err := testutils.Execute(t, command, tc.args...)
+			t.Log(out)
 
 			if tc.err == "" {
 				require.Contains(t, out, tc.expected)

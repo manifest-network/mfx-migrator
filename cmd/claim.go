@@ -34,12 +34,21 @@ func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
-	if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
+	claimConfig := LoadClaimConfigFromCLI()
+	slog.Debug("args", "claim-config", claimConfig)
+
+	authConfig := LoadAuthConfigFromCLI()
+	slog.Debug("args", "auth-config", authConfig)
+	if err := authConfig.Validate(); err != nil {
 		return err
 	}
 
-	item, err := claimWorkItem(r, config.UUID, config.Force)
+	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
+	if err := AuthenticateRestClient(r, authConfig.Username, authConfig.Password); err != nil {
+		return err
+	}
+
+	item, err := claimWorkItem(r, config.UUID, claimConfig.Force)
 	if err != nil {
 		return err
 	}

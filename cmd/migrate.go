@@ -39,6 +39,12 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	authConfig := LoadAuthConfigFromCLI()
+	slog.Debug("args", "auth-config", authConfig)
+	if err := authConfig.Validate(); err != nil {
+		return err
+	}
+
 	slog.Info("Loading state...", "uuid", config.UUID)
 	item, err := store.LoadState(config.UUID)
 	if err != nil {
@@ -50,7 +56,7 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
-	if err := AuthenticateRestClient(r, config.Username, config.Password); err != nil {
+	if err := AuthenticateRestClient(r, authConfig.Username, authConfig.Password); err != nil {
 		return err
 	}
 

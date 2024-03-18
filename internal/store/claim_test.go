@@ -30,6 +30,7 @@ func TestStore_Claim(t *testing.T) {
 	rClient := resty.New().SetBaseURL(testUrl.String()).SetPathParam("neighborhood", testutils.Neighborhood)
 	httpmock.ActivateNonDefault(rClient.GetClient())
 
+	// TODO: Test force claim of a failed item clears the previous error
 	var tests = []testCase{
 		// Successfully claim a work item from the queue
 		{"success_queue", []testutils.HttpResponder{
@@ -104,6 +105,17 @@ func TestStore_Claim(t *testing.T) {
 			item, err := store.ClaimWorkItemFromUUID(rClient, myUUID, true)
 			require.Equal(t, myUUID, item.UUID)
 			require.Equal(t, item.Status, store.CLAIMED)
+			require.NoError(t, err)
+			require.NotNil(t, item)
+		}},
+		// Test force claim of a failed item clears the previous error
+		{"force_uuid_clear_previous", []testutils.HttpResponder{
+			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.FAILED)},
+			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		}, func() {
+			item, err := store.ClaimWorkItemFromUUID(rClient, uuid.MustParse("5aa19d2a-4bdf-4687-a850-1804756b3f1f"), true)
+			require.Equal(t, store.CLAIMED, item.Status)
+			require.Nil(t, item.Error)
 			require.NoError(t, err)
 			require.NotNil(t, item)
 		}},

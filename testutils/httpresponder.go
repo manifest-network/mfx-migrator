@@ -88,6 +88,11 @@ var GarbageResponder, _ = httpmock.NewJsonResponder(http.StatusOK, "{\"foo\": \"
 
 // TODO: Random
 func MustMigrationGetResponder(status store.WorkItemStatus) httpmock.Responder {
+	var failedErr *string
+	sErr := "some error"
+	if status == store.FAILED {
+		failedErr = &sErr
+	}
 	response := store.WorkItem{
 		Status:           status,
 		CreatedDate:      &CreatedDate,
@@ -96,7 +101,7 @@ func MustMigrationGetResponder(status store.WorkItemStatus) httpmock.Responder {
 		ManifestAddress:  ManifestAddress,
 		ManifestHash:     nil,
 		ManifestDatetime: nil,
-		Error:            nil,
+		Error:            failedErr,
 	}
 	var migrationGetResponder, err = httpmock.NewJsonResponder(http.StatusOK, response)
 	if err != nil {
