@@ -9,6 +9,10 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
+
+	"github.com/liftedinit/mfx-migrator/internal/config"
+	"github.com/liftedinit/mfx-migrator/internal/utils"
 
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
@@ -69,4 +73,47 @@ func AuthenticateRestClient(r *resty.Client, username, password string) error {
 	r.SetAuthToken(token.AccessToken)
 
 	return nil
+}
+
+// LoadConfigFromCLI loads the Config from the CLI flags
+//
+// `uuidKey` is the name of the viper key that holds the UUID
+// This is necessary because the UUID is used in multiple commands
+func LoadConfigFromCLI(uuidKey string) config.Config {
+	return config.Config{
+		UUID:         viper.GetString(uuidKey),
+		Url:          viper.GetString("url"),
+		Neighborhood: viper.GetUint64("neighborhood"),
+	}
+}
+
+func LoadAuthConfigFromCLI() config.AuthConfig {
+	return config.AuthConfig{
+		Username: viper.GetString("username"),
+		Password: viper.GetString("password"),
+	}
+}
+
+func LoadClaimConfigFromCLI() config.ClaimConfig {
+	return config.ClaimConfig{
+		Force: viper.GetBool("force"),
+	}
+}
+
+func LoadMigrationConfigFromCLI() config.MigrateConfig {
+	var tokenMap map[string]utils.TokenInfo
+	if err := viper.UnmarshalKey("token-map", &tokenMap); err != nil {
+		panic(err)
+	}
+	return config.MigrateConfig{
+		ChainID:          viper.GetString("chain-id"),
+		AddressPrefix:    viper.GetString("address-prefix"),
+		NodeAddress:      viper.GetString("node-address"),
+		KeyringBackend:   viper.GetString("keyring-backend"),
+		BankAddress:      viper.GetString("bank-address"),
+		ChainHome:        viper.GetString("chain-home"),
+		TokenMap:         tokenMap,
+		WaitTxTimeout:    viper.GetUint("wait-for-tx-timeout"),
+		WaitBlockTimeout: viper.GetUint("wait-for-block-timeout"),
+	}
 }

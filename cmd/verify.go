@@ -16,13 +16,13 @@ var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify the status of a migration of MFX tokens to the Manifest Ledger",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		config := LoadConfigFromCLI("verify-uuid")
-		slog.Debug("args", "config", config)
-		if err := config.Validate(); err != nil {
+		c := LoadConfigFromCLI("verify-uuid")
+		slog.Debug("args", "c", c)
+		if err := c.Validate(); err != nil {
 			return err
 		}
 
-		s, err := store.LoadState(config.UUID)
+		s, err := store.LoadState(c.UUID)
 		if err != nil {
 			slog.Warn("unable to load local state, continuing", "warning", err)
 		}
@@ -32,11 +32,11 @@ var verifyCmd = &cobra.Command{
 		}
 
 		// Verify the work item on the remote database
-		slog.Debug("verifying remote state", "url", config.Url, "uuid", config.UUID)
+		slog.Debug("verifying remote state", "url", c.Url, "uuid", c.UUID)
 
-		r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
+		r := CreateRestClient(cmd.Context(), c.Url, c.Neighborhood)
 
-		item, err := store.GetWorkItem(r, uuid.MustParse(config.UUID))
+		item, err := store.GetWorkItem(r, uuid.MustParse(c.UUID))
 		if err != nil {
 			return errors.WithMessage(err, "unable to get work item")
 		}

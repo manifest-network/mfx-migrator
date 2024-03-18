@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/liftedinit/mfx-migrator/internal/config"
+
 	"github.com/liftedinit/mfx-migrator/internal/many"
 	"github.com/liftedinit/mfx-migrator/internal/utils"
 
@@ -27,26 +29,26 @@ var migrateCmd = &cobra.Command{
 }
 
 func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
-	config := LoadConfigFromCLI("migrate-uuid")
-	slog.Debug("args", "config", config)
-	if err := config.Validate(); err != nil {
+	c := LoadConfigFromCLI("migrate-uuid")
+	slog.Debug("args", "c", c)
+	if err := c.Validate(); err != nil {
 		return err
 	}
 
 	migrateConfig := LoadMigrationConfigFromCLI()
-	slog.Debug("args", "migrate-config", migrateConfig)
+	slog.Debug("args", "migrate-c", migrateConfig)
 	if err := migrateConfig.Validate(); err != nil {
 		return err
 	}
 
 	authConfig := LoadAuthConfigFromCLI()
-	slog.Debug("args", "auth-config", authConfig)
+	slog.Debug("args", "auth-c", authConfig)
 	if err := authConfig.Validate(); err != nil {
 		return err
 	}
 
-	slog.Info("Loading state...", "uuid", config.UUID)
-	item, err := store.LoadState(config.UUID)
+	slog.Info("Loading state...", "uuid", c.UUID)
+	item, err := store.LoadState(c.UUID)
 	if err != nil {
 		return errors.WithMessage(err, "unable to load state")
 	}
@@ -55,7 +57,7 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	r := CreateRestClient(cmd.Context(), config.Url, config.Neighborhood)
+	r := CreateRestClient(cmd.Context(), c.Url, c.Neighborhood)
 	if err := AuthenticateRestClient(r, authConfig.Username, authConfig.Password); err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ func compareItems(item *store.WorkItem, remoteItem *store.WorkItem) error {
 	return nil
 }
 
-func SetupMigrateCmdFlags(command *cobra.Command) {
+func setupStringCmdFlags(command *cobra.Command) {
 	args := []struct {
 		name     string
 		key      string
@@ -125,6 +127,31 @@ func SetupMigrateCmdFlags(command *cobra.Command) {
 	}
 }
 
+func setupUIntCmdFlags(command *cobra.Command) {
+	args := []struct {
+		name  string
+		key   string
+		value uint
+		usage string
+	}{
+		{"wait-for-tx-timeout", "wait-for-tx-timeout", 15, "Number of seconds spent waiting for the transaction to be included in a block"},
+		{"wait-for-block-timeout", "wait-for-block-timeout", 30, "Number of seconds spent waiting for the block to be committed"},
+	}
+
+	for _, arg := range args {
+		command.Flags().Uint(arg.name, arg.value, arg.usage)
+		if err := viper.BindPFlag(arg.key, command.Flags().Lookup(arg.name)); err != nil {
+			slog.Error(ErrorBindingFlag, "error", err)
+		}
+	}
+
+}
+
+func SetupMigrateCmdFlags(command *cobra.Command) {
+	setupStringCmdFlags(command)
+	setupUIntCmdFlags(command)
+}
+
 func mapToken(symbol string, tokenMap map[string]utils.TokenInfo) (*utils.TokenInfo, error) {
 	if _, ok := tokenMap[symbol]; !ok {
 		return nil, fmt.Errorf("token %s not found in token map", symbol)
@@ -134,7 +161,7 @@ func mapToken(symbol string, tokenMap map[string]utils.TokenInfo) (*utils.TokenI
 }
 
 // migrate migrates a work item to the Manifest Ledger.
-func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error {
+func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig) error {
 	slog.Info("Migrating work item...", "uuid", item.UUID)
 
 	remoteItem, err := store.GetWorkItem(r, item.UUID)
@@ -171,7 +198,7 @@ func migrate(r *resty.Client, item *store.WorkItem, config MigrateConfig) error 
 	slog.Debug("Amount before conversion", "amount", txInfo.Arguments.Amount)
 
 	// Convert the amount to the destination chain precision
-	// TODO: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
+	// NOTE: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
 	amount, err := utils.ConvertPrecision(txInfo.Arguments.Amount, 9, tokenInfo.Precision)
 	if err != nil {
 		return errors.WithMessage(err, "error converting token to destination precision")
@@ -247,16 +274,8 @@ func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error 
 }
 
 // sendTokens sends the tokens from the bank account to the user account.
-func sendTokens(item *store.WorkItem, config MigrateConfig, denom string, amount *big.Int) (*string, *time.Time, error) {
-	txResponse, blockTime, err := manifest.Migrate(item, manifest.MigrationConfig{
-		ChainID:        config.ChainID,
-		NodeAddress:    config.NodeAddress,
-		KeyringBackend: config.KeyringBackend,
-		ChainHome:      config.ChainHome,
-		AddressPrefix:  config.AddressPrefix,
-		BankAddress:    config.BankAddress,
-		TokenMap:       config.TokenMap,
-	}, denom, amount)
+func sendTokens(item *store.WorkItem, config config.MigrateConfig, denom string, amount *big.Int) (*string, *time.Time, error) {
+	txResponse, blockTime, err := manifest.Migrate(item, config, denom, amount)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "error during migration, operator intervention required")
 	}
