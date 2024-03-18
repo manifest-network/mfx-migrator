@@ -1,3 +1,8 @@
+[![build](https://img.shields.io/circleci/build/github/liftedinit/mfx-migrator/main)](https://app.circleci.com/pipelines/github/liftedinit/mfx-migrator)
+[![coverage](https://img.shields.io/codecov/c/github/liftedinit/mfx-migrator)](https://app.codecov.io/gh/liftedinit/mfx-migrator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/liftedinit/mfx-migrator)](https://goreportcard.com/report/github.com/liftedinit/mfx-migrator)
+
+
 **mfx-migrator** is a centralized daemon responsible for migrating data from the old MANY chain to the new MANIFEST chain. 
 The daemon analyses the MANY chain for new migration-type transactions, processed them, and triggers token transaction on the MANIFEST chain.
 
