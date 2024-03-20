@@ -37,7 +37,7 @@ func TestStore_Claim(t *testing.T) {
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, func() {
-			items, err := store.ClaimWorkItemFromQueue(rClient)
+			items, err := store.ClaimWorkItemFromQueue(rClient, 1)
 			require.NotEmpty(t, items)
 			require.NotEqual(t, uuid.Nil, items[0].UUID)
 			require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestStore_Claim(t *testing.T) {
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
 			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.NotFoundResponder},
 		}, func() {
-			item, err := store.ClaimWorkItemFromQueue(rClient)
+			item, err := store.ClaimWorkItemFromQueue(rClient, 1)
 			require.Error(t, err)
 			require.ErrorContains(t, err, "could not claim work item")
 			require.ErrorContains(t, err, "status code: 404")
@@ -59,7 +59,7 @@ func TestStore_Claim(t *testing.T) {
 		{"no_item_queue", []testutils.HttpResponder{
 			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(0, store.CREATED)},
 		}, func() {
-			item, err := store.ClaimWorkItemFromQueue(rClient)
+			item, err := store.ClaimWorkItemFromQueue(rClient, 1)
 			require.NoError(t, err) // no work items available
 			require.Empty(t, item)
 		}},
@@ -142,7 +142,7 @@ func TestStore_Claim(t *testing.T) {
 		{"invalid_work_items", []testutils.HttpResponder{
 			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.GarbageResponder},
 		}, func() {
-			item, err := store.ClaimWorkItemFromQueue(rClient)
+			item, err := store.ClaimWorkItemFromQueue(rClient, 1)
 			require.Error(t, err)
 			require.ErrorContains(t, err, "cannot unmarshal")
 			require.Nil(t, item)
@@ -151,7 +151,7 @@ func TestStore_Claim(t *testing.T) {
 		{"invalid_all_work_items_url", []testutils.HttpResponder{
 			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.NotFoundResponder},
 		}, func() {
-			_, err := store.ClaimWorkItemFromQueue(rClient)
+			_, err := store.ClaimWorkItemFromQueue(rClient, 1)
 			require.Error(t, err) // unable to list work items
 			require.ErrorContains(t, err, "could not get all work items")
 			require.ErrorContains(t, err, "status code: 404")
@@ -162,7 +162,7 @@ func TestStore_Claim(t *testing.T) {
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
 			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.NotFoundResponder},
 		}, func() {
-			item, err := store.ClaimWorkItemFromQueue(rClient)
+			item, err := store.ClaimWorkItemFromQueue(rClient, 1)
 			require.Error(t, err)
 			require.ErrorContains(t, err, "could not claim work item")
 			require.ErrorContains(t, err, "error updating remote work item")

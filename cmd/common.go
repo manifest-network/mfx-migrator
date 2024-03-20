@@ -97,6 +97,7 @@ func LoadAuthConfigFromCLI() config.AuthConfig {
 func LoadClaimConfigFromCLI() config.ClaimConfig {
 	return config.ClaimConfig{
 		Force: viper.GetBool("force"),
+		Jobs:  viper.GetUint("jobs"),
 	}
 }
 

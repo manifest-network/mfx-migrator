@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/liftedinit/mfx-migrator/internal/config"
+
 	"github.com/liftedinit/mfx-migrator/internal/store"
 )
 
@@ -36,6 +38,9 @@ func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
 
 	claimConfig := LoadClaimConfigFromCLI()
 	slog.Debug("args", "claim-c", claimConfig)
+	if err := claimConfig.Validate(); err != nil {
+		return err
+	}
 
 	authConfig := LoadAuthConfigFromCLI()
 	slog.Debug("args", "auth-c", authConfig)
@@ -48,7 +53,7 @@ func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	items, err := claimWorkItem(r, c.UUID, claimConfig.Force)
+	items, err := claimWorkItem(r, c.UUID, claimConfig)
 	if err != nil {
 		return err
 	}
@@ -71,6 +76,11 @@ func SetupClaimCmdFlags(command *cobra.Command) {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
+	command.Flags().UintP("jobs", "j", 1, "Number of parallel jobs to claim")
+	if err := viper.BindPFlag("jobs", command.Flags().Lookup("jobs")); err != nil {
+		slog.Error(ErrorBindingFlag, "error", err)
+	}
+
 	command.Flags().String("uuid", "", "UUID of the work item to claim")
 	if err := viper.BindPFlag("claim-uuid", command.Flags().Lookup("uuid")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
@@ -78,16 +88,16 @@ func SetupClaimCmdFlags(command *cobra.Command) {
 }
 
 // claimWorkItem claims a work item from the database
-func claimWorkItem(r *resty.Client, uuidStr string, force bool) ([]*store.WorkItem, error) {
+func claimWorkItem(r *resty.Client, uuidStr string, config config.ClaimConfig) ([]*store.WorkItem, error) {
 	slog.Info("Claiming work item...")
 	var err error
 	var items []*store.WorkItem
 	if uuidStr != "" {
 		var item *store.WorkItem
-		item, err = store.ClaimWorkItemFromUUID(r, uuid.MustParse(uuidStr), force)
+		item, err = store.ClaimWorkItemFromUUID(r, uuid.MustParse(uuidStr), config.Force)
 		items = append(items, item)
 	} else {
-		items, err = store.ClaimWorkItemFromQueue(r)
+		items, err = store.ClaimWorkItemFromQueue(r, config.Jobs)
 	}
 
 	// An error occurred during the claim

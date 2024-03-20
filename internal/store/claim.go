@@ -13,7 +13,7 @@ import (
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
 // Items will be claimed in parallel using goroutine.
 // The maximum number of items that can be claimed in parallel is defined by the pagination of the remote database.
-func ClaimWorkItemFromQueue(r *resty.Client) ([]*WorkItem, error) {
+func ClaimWorkItemFromQueue(r *resty.Client, jobs uint) ([]*WorkItem, error) {
 	// 1. Get all work items from remote
 	status := CREATED
 	items, err := GetAllWorkItems(r, &status)
@@ -22,6 +22,7 @@ func ClaimWorkItemFromQueue(r *resty.Client) ([]*WorkItem, error) {
 	}
 
 	var g errgroup.Group
+	g.SetLimit(int(jobs))
 	claimedItems := make([]*WorkItem, 0)
 
 	// 2. Loop over all work items

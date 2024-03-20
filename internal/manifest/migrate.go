@@ -184,7 +184,7 @@ func signAndBroadcast(ctx client.Context, txBuilder client.TxBuilder, bankAccoun
 		return nil, nil, errors.WithMessage(err, "failed to encode transaction")
 	}
 
-	res, err := ctx.BroadcastTxSync(txBytes)
+	res, err := ctx.BroadcastTx(txBytes)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to broadcast transaction")
 	}
