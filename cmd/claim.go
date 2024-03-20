@@ -48,12 +48,12 @@ func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	item, err := claimWorkItem(r, c.UUID, claimConfig.Force)
+	items, err := claimWorkItem(r, c.UUID, claimConfig.Force)
 	if err != nil {
 		return err
 	}
 
-	if item == nil {
+	if len(items) == 0 {
 		slog.Info("No work items available")
 	}
 
@@ -78,14 +78,16 @@ func SetupClaimCmdFlags(command *cobra.Command) {
 }
 
 // claimWorkItem claims a work item from the database
-func claimWorkItem(r *resty.Client, uuidStr string, force bool) (*store.WorkItem, error) {
+func claimWorkItem(r *resty.Client, uuidStr string, force bool) ([]*store.WorkItem, error) {
 	slog.Info("Claiming work item...")
 	var err error
-	var item *store.WorkItem
+	var items []*store.WorkItem
 	if uuidStr != "" {
+		var item *store.WorkItem
 		item, err = store.ClaimWorkItemFromUUID(r, uuid.MustParse(uuidStr), force)
+		items = append(items, item)
 	} else {
-		item, err = store.ClaimWorkItemFromQueue(r)
+		items, err = store.ClaimWorkItemFromQueue(r)
 	}
 
 	// An error occurred during the claim
@@ -93,9 +95,9 @@ func claimWorkItem(r *resty.Client, uuidStr string, force bool) (*store.WorkItem
 		return nil, errors.WithMessage(err, "could not claim work item")
 	}
 
-	if item != nil {
+	for _, item := range items {
 		slog.Info("Work item claimed", "uuid", item.UUID)
 	}
 
-	return item, nil
+	return items, nil
 }

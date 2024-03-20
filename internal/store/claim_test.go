@@ -37,10 +37,11 @@ func TestStore_Claim(t *testing.T) {
 			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, func() {
-			item, err := store.ClaimWorkItemFromQueue(rClient)
-			require.NotEqual(t, uuid.Nil, item.UUID)
+			items, err := store.ClaimWorkItemFromQueue(rClient)
+			require.NotEmpty(t, items)
+			require.NotEqual(t, uuid.Nil, items[0].UUID)
 			require.NoError(t, err)
-			require.NotNil(t, item)
+			require.NotNil(t, items)
 		}},
 		// Fail to claim a work item from the queue (work item update failure)
 		{"failure_queue", []testutils.HttpResponder{
@@ -60,7 +61,7 @@ func TestStore_Claim(t *testing.T) {
 		}, func() {
 			item, err := store.ClaimWorkItemFromQueue(rClient)
 			require.NoError(t, err) // no work items available
-			require.Nil(t, item)
+			require.Empty(t, item)
 		}},
 		// Successfully claim a work item by UUID
 		{"success_uuid", []testutils.HttpResponder{
@@ -168,6 +169,13 @@ func TestStore_Claim(t *testing.T) {
 			require.ErrorContains(t, err, "status code: 404")
 			require.Nil(t, item)
 		}},
+		//{"claim multiple", []testutils.HttpResponder{
+		//	{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(2, store.CREATED)},
+		//	{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
+		//	{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
+		//}, func() {
+		//
+		//}},
 	}
 
 	for _, tt := range tests {
