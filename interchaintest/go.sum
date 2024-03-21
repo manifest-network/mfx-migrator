@@ -803,8 +803,8 @@ github.com/libp2p/go-libp2p v0.31.0 h1:LFShhP8F6xthWiBBq3euxbKjZsoRajVEyBS9snfHx
 github.com/libp2p/go-libp2p v0.31.0/go.mod h1:W/FEK1c/t04PbRH3fA9i5oucu5YcgrG0JVoBWT1B7Eg=
 github.com/liftedinit/manifest-ledger v0.0.0-20240314224639-e2635faa7017 h1:7JoK+r3BY+Rc+yuk7GiDEoCyoja83udcP/5+k1zRZhg=
 github.com/liftedinit/manifest-ledger v0.0.0-20240314224639-e2635faa7017/go.mod h1:VPZ1gL9nsQ27TSHMa026XvZ9BikPnqAKexx2sOwqHGo=
-github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240302231515-129bae4d6c47 h1:zk/iW2W6nYnjZN6Bq9tpIlBAnQbMcDIARLmxMD9gMVg=
-github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240302231515-129bae4d6c47/go.mod h1:s4i5aiZFOmcqUcBw/BKtvdYBoYNlcmt57n4F2i43CyQ=
+github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240314224639-e2635faa7017 h1:johBFb/EFDdDO6+QnidfPr4AVh/2VKuUjA0/rKdbLII=
+github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240314224639-e2635faa7017/go.mod h1:2XWGqup5MUjgdJKX3YIOwtv4HpOEws2o/+c6P37dVsE=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
 github.com/linxGnu/grocksdb v1.8.12 h1:1/pCztQUOa3BX/1gR3jSZDoaKFpeHFvQ1XrqZpSvZVo=

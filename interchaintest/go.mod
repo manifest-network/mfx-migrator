@@ -17,7 +17,7 @@ require (
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/liftedinit/manifest-ledger v0.0.0-20240314224639-e2635faa7017
-	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240302231515-129bae4d6c47
+	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240314224639-e2635faa7017
 	github.com/liftedinit/mfx-migrator v0.0.0-00000000000000-000000000000
 	github.com/spf13/cobra v1.8.0
 	github.com/strangelove-ventures/interchaintest/v8 v8.1.0
