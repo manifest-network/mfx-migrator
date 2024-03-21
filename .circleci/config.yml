@@ -4,6 +4,7 @@ version: 2.1
 
 GO_VERSION: &go_version '1.22.1'
 GORELEASER_VERSION: &goreleaser_version 'v1.24.0'
+GO_MOD_CACHE_KEY: &go_mod_cache_key 'go-mod-2'
 
 orbs:
   go: circleci/go@1.11.0
@@ -18,9 +19,11 @@ jobs:
       - checkout
       - go/install:
           version: *go_version
-      - go/load-cache
+      - go/load-cache:
+            key: *go_mod_cache_key
       - go/mod-download
-      - go/save-cache
+      - go/save-cache:
+            key: *go_mod_cache_key
       - run: make test
       - run: make coverage
       - codecov/upload:
