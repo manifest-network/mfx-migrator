@@ -18,7 +18,7 @@ require (
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/liftedinit/manifest-ledger v0.0.1-alpha.1
 	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240302231515-129bae4d6c47
-	github.com/liftedinit/mfx-migrator v0.0.0-20240221164912-17e19576ad59
+	github.com/liftedinit/mfx-migrator v0.0.0-00000000000000-000000000000
 	github.com/spf13/cobra v1.8.0
 	github.com/strangelove-ventures/interchaintest/v8 v8.1.0
 	github.com/strangelove-ventures/poa v0.0.1-alpha.3
