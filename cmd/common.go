@@ -31,13 +31,13 @@ func CreateRestClient(ctx context.Context, url string, neighborhood uint64) *res
 	} else {
 		client = resty.New()
 	}
-	// Retry the claim process 3 times with a 5 seconds wait time between retries and a maximum wait time of 60 seconds.
-	// Retry uses an exponential backoff algorithm.
 	return client.
 		SetBaseURL(url).
 		SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
-		SetRetryCount(3).
-		SetRetryWaitTime(5 * time.Second).SetRetryMaxWaitTime(60 * time.Second)
+		SetRetryCount(3).                      // Retry the request process 3 times. Retry uses an exponential backoff algorithm.
+		SetRetryWaitTime(5 * time.Second).     // With a 5 seconds wait time between retries
+		SetRetryMaxWaitTime(60 * time.Second). // And a maximum wait time of 60 seconds for the whole process
+		SetTimeout(10 * time.Second)           // Set a timeout of 10 seconds for the request
 }
 
 // AuthenticateRestClient logs in to the remote database
@@ -97,6 +97,7 @@ func LoadAuthConfigFromCLI() config.AuthConfig {
 func LoadClaimConfigFromCLI() config.ClaimConfig {
 	return config.ClaimConfig{
 		Force: viper.GetBool("force"),
+		Jobs:  viper.GetUint("jobs"),
 	}
 }
 

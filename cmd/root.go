@@ -93,7 +93,8 @@ func init() {
 	SetupRootCmdFlags(rootCmd)
 
 	viper.AddConfigPath("./")
-	viper.SetConfigName("config")
+	viper.AddConfigPath("/mfx-migrator")
+	viper.SetConfigName("migrator-config")
 
 	viper.AutomaticEnv()
 }

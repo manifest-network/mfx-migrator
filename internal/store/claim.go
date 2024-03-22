@@ -7,11 +7,13 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 // ClaimWorkItemFromQueue retrieves a work item from the remote database work queue.
-// TODO: Support claiming multiple work items at once
-func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
+// Items will be claimed in parallel using goroutine.
+// The maximum number of items that can be claimed in parallel is defined by the pagination of the remote database.
+func ClaimWorkItemFromQueue(r *resty.Client, jobs uint) ([]*WorkItem, error) {
 	// 1. Get all work items from remote
 	status := CREATED
 	items, err := GetAllWorkItems(r, &status)
@@ -19,20 +21,35 @@ func ClaimWorkItemFromQueue(r *resty.Client) (*WorkItem, error) {
 		return nil, errors.WithMessage(err, ErrorGettingWorkItems)
 	}
 
+	var g errgroup.Group
+	g.SetLimit(int(jobs))
+	claimedItems := make([]*WorkItem, 0)
+
 	// 2. Loop over all work items
 	for _, item := range items.Items {
-		// 2.0 Check if the work item is in the correct state to be claimed
-		if !itemCanBeClaimed(&item, false) {
-			slog.Warn("unable to claim work item, invalid state", "uuid", item.UUID, "status", item.Status.String())
-			continue
-		}
+		item := item
+		g.Go(func() error {
+			// 2.0 Check if the work item is in the correct state to be claimed
+			if !itemCanBeClaimed(&item, false) {
+				slog.Warn("unable to claim work item, invalid state", "uuid", item.UUID, "status", item.Status.String())
+				return nil
+			}
 
-		// 2.1 Try claiming the work item
-		return claimItem(r, &item)
+			claimedItem, err := claimItem(r, &item)
+			if err != nil {
+				return errors.WithMessage(err, ErrorClaimingWorkItem)
+			}
+			claimedItems = append(claimedItems, claimedItem)
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, errors.WithMessage(err, ErrorClaimingWorkItem)
 	}
 
 	// No work items available
-	return nil, nil
+	return claimedItems, nil
 }
 
 func ClaimWorkItemFromUUID(r *resty.Client, uuid uuid.UUID, force bool) (*WorkItem, error) {

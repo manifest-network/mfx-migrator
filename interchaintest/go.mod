@@ -16,13 +16,13 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/jarcoal/httpmock v1.3.1
-	github.com/liftedinit/manifest-ledger v0.0.1-alpha.1
-	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240302231515-129bae4d6c47
-	github.com/liftedinit/mfx-migrator v0.0.0-20240221164912-17e19576ad59
-	github.com/reecepbcups/tokenfactory v0.50.0-alpha.3
+	github.com/liftedinit/manifest-ledger v0.0.0-20240314224639-e2635faa7017
+	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240314224639-e2635faa7017
+	github.com/liftedinit/mfx-migrator v0.0.0-00000000000000-000000000000
 	github.com/spf13/cobra v1.8.0
 	github.com/strangelove-ventures/interchaintest/v8 v8.1.0
 	github.com/strangelove-ventures/poa v0.0.1-alpha.3
+	github.com/strangelove-ventures/tokenfactory v0.50.0-alpha.4
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.26.0
 )
@@ -32,7 +32,7 @@ require (
 	cloud.google.com/go/compute v1.24.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
-	cloud.google.com/go/storage v1.36.0 // indirect
+	cloud.google.com/go/storage v1.37.0 // indirect
 	cosmossdk.io/api v0.7.3 // indirect
 	cosmossdk.io/collections v0.4.0 // indirect
 	cosmossdk.io/core v0.12.0 // indirect
@@ -82,7 +82,7 @@ require (
 	github.com/cosmos/gogoproto v1.4.11 // indirect
 	github.com/cosmos/iavl v1.0.1 // indirect
 	github.com/cosmos/ibc-go/modules/capability v1.0.0 // indirect
-	github.com/cosmos/ibc-go/v8 v8.0.0 // indirect
+	github.com/cosmos/ibc-go/v8 v8.1.0 // indirect
 	github.com/cosmos/ics23/go v0.10.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.13.3 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
