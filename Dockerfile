@@ -37,7 +37,7 @@ COPY --from=builder /app/scripts/claim_and_migrate.sh /etc/cron.d/claim_and_migr
 RUN chmod +x /etc/cron.d/claim_and_migrate.sh
 
 # Add a cron job to run the script every minute.
-RUN echo "* * * * * root /etc/cron.d/claim_and_migrate.sh >> /var/log/cron.log 2>&1" >> /etc/crontab
+RUN echo "* * * * * root /usr/bin/flock -n /tmp/migrator.lock /etc/cron.d/claim_and_migrate.sh >> /var/log/cron.log 2>&1" >> /etc/crontab
 
 # Create a log file to store the cron job output.
 RUN touch /var/log/cron.log
