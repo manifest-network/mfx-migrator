@@ -15,8 +15,9 @@ var (
 	DefaultMigrationUrl  = DefaultMigrationsUrl + Uuidv4Regex
 
 	DefaultTransactionUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/transactions/", "0")
+	DefaultClaimUrl       = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/claim/", "0")
 
-	MigrationsUrl = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/", Neighborhood)
-	MigrationUrl  = MigrationsUrl + Uuidv4Regex
-	LoginUrl      = RootUrl + "auth/login"
+	ClaimUrl     = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/claim/", Neighborhood)
+	ClaimUuidUrl = ClaimUrl + Uuidv4Regex
+	LoginUrl     = RootUrl + "auth/login"
 )

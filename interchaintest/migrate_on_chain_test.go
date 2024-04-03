@@ -169,6 +169,7 @@ func TestMigrateOnChain(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, balanceUN, tc.expected.User.New)
 			}
+			httpmock.Reset()
 		})
 
 		// Remove the work item file if it exists

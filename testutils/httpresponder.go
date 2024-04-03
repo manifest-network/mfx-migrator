@@ -48,14 +48,10 @@ func MustNewTransactionResponseResponder(amount string) httpmock.Responder {
 	return transactionResponseResponder
 }
 
-func MustAllMigrationsGetResponder(nb uint, status store.WorkItemStatus) httpmock.Responder {
-	if nb > 1 {
-		panic("nb must be <= 1")
-	}
-
-	var items []store.WorkItem = nil
+func getClaimedItems(nb uint, status store.WorkItemStatus) []*store.WorkItem {
+	var items []*store.WorkItem = nil
 	for i := 0; i < int(nb); i++ {
-		items = append(items, store.WorkItem{
+		items = append(items, &store.WorkItem{
 			Status:           status,
 			CreatedDate:      &CreatedDate,
 			UUID:             uuid.MustParse(Uuid),
@@ -66,21 +62,29 @@ func MustAllMigrationsGetResponder(nb uint, status store.WorkItemStatus) httpmoc
 		})
 	}
 
-	response := store.WorkItems{
-		Items: items,
-		Meta: store.Meta{
-			TotalItems:   len(items),
-			ItemCount:    len(items),
-			ItemsPerPage: 10,
-			TotalPages:   1,
-			CurrentPage:  1,
-		},
+	return items
+}
+
+func MigrationClaimResponder(nb uint, status store.WorkItemStatus) httpmock.Responder {
+	if nb > 1 {
+		panic("nb must be <= 1")
 	}
-	var allMigrationsGetResponder, err = httpmock.NewJsonResponder(http.StatusOK, response)
+	items := getClaimedItems(nb, status)
+
+	var migrationClaimResponder, err = httpmock.NewJsonResponder(http.StatusOK, items)
 	if err != nil {
 		panic(err)
 	}
-	return allMigrationsGetResponder
+	return migrationClaimResponder
+}
+
+func MigrationClaimOneResponder(status store.WorkItemStatus) httpmock.Responder {
+	items := getClaimedItems(1, status)
+	var migrationClaimResponder, err = httpmock.NewJsonResponder(http.StatusOK, items[0])
+	if err != nil {
+		panic(err)
+	}
+	return migrationClaimResponder
 }
 
 var NotFoundResponder, _ = httpmock.NewJsonResponder(http.StatusNotFound, nil)
