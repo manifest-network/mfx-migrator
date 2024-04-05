@@ -1,6 +1,6 @@
 module github.com/liftedinit/mfx-migrator/interchaintest
 
-go 1.22.1
+go 1.22.2
 
 replace (
 	cosmossdk.io/core => cosmossdk.io/core v0.11.0 // proper SDK v50 version
@@ -234,7 +234,7 @@ require (
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
