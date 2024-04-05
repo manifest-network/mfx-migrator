@@ -38,9 +38,6 @@ func ClaimCmdRunE(cmd *cobra.Command, args []string) error {
 
 	claimConfig := LoadClaimConfigFromCLI()
 	slog.Debug("args", "claim-c", claimConfig)
-	if err := claimConfig.Validate(); err != nil {
-		return err
-	}
 
 	authConfig := LoadAuthConfigFromCLI()
 	slog.Debug("args", "auth-c", authConfig)
@@ -76,11 +73,6 @@ func SetupClaimCmdFlags(command *cobra.Command) {
 		slog.Error(ErrorBindingFlag, "error", err)
 	}
 
-	command.Flags().UintP("jobs", "j", 1, "Number of parallel jobs to claim")
-	if err := viper.BindPFlag("jobs", command.Flags().Lookup("jobs")); err != nil {
-		slog.Error(ErrorBindingFlag, "error", err)
-	}
-
 	command.Flags().String("uuid", "", "UUID of the work item to claim")
 	if err := viper.BindPFlag("claim-uuid", command.Flags().Lookup("uuid")); err != nil {
 		slog.Error(ErrorBindingFlag, "error", err)
@@ -95,14 +87,15 @@ func claimWorkItem(r *resty.Client, uuidStr string, config config.ClaimConfig) (
 	if uuidStr != "" {
 		var item *store.WorkItem
 		item, err = store.ClaimWorkItemFromUUID(r, uuid.MustParse(uuidStr), config.Force)
+		if err != nil {
+			return nil, errors.WithMessage(err, "could not claim work item")
+		}
 		items = append(items, item)
 	} else {
-		items, err = store.ClaimWorkItemFromQueue(r, config.Jobs)
-	}
-
-	// An error occurred during the claim
-	if err != nil {
-		return nil, errors.WithMessage(err, "could not claim work item")
+		items, err = store.ClaimWorkItemFromQueue(r)
+		if err != nil {
+			return nil, errors.WithMessage(err, "could not claim work item")
+		}
 	}
 
 	for _, item := range items {

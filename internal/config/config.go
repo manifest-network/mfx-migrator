@@ -67,15 +67,6 @@ func (c AuthConfig) Validate() error {
 
 type ClaimConfig struct {
 	Force bool // Force re-claiming of a failed work item
-	Jobs  uint // Number of parallel jobs to claim
-}
-
-func (c ClaimConfig) Validate() error {
-	if c.Jobs == 0 {
-		return fmt.Errorf("jobs > 0 is required")
-	}
-
-	return nil
 }
 
 type MigrateConfig struct {

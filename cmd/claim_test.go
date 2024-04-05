@@ -42,46 +42,27 @@ func TestClaimCmd(t *testing.T) {
 		{name: "password missing", args: usernameArg, err: "password is required"},
 		{name: "claim from queue (default neighborhood)", args: passwordArg, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.DefaultMigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CREATED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
-			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
+			{Method: "PUT", Url: testutils.DefaultClaimUrl, Responder: testutils.MigrationClaimResponder(1, store.CLAIMED)},
 		}, expected: "Work item claimed"},
 		{name: "claim from queue (neighborhood == 1)", args: neighborhoodArg, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CREATED)},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
-			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
+			{Method: "PUT", Url: "=~^" + testutils.ClaimUrl, Responder: testutils.MigrationClaimResponder(1, store.CLAIMED)},
 		}, expected: "Work item claimed"},
 		{name: "auth endpoint not found", args: neighborhoodArg, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.NotFoundResponder},
 		}, err: "response status code: 404"},
-		{name: "unable to claim from queue (invalid state)", args: neighborhoodArg, endpoints: []testutils.HttpResponder{
-			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(1, store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-		}, expected: "invalid state"},
 		{name: "unable to claim from queue (no work items available)", args: neighborhoodArg, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.MigrationsUrl, Responder: testutils.MustAllMigrationsGetResponder(0, store.CREATED)},
+			{Method: "PUT", Url: testutils.ClaimUrl, Responder: testutils.MigrationClaimResponder(0, store.CLAIMED)},
 		}, expected: "No work items available"},
 		{name: "claim from uuid", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr}...), endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CREATED)},
-			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
+			{Method: "PUT", Url: "=~^" + testutils.ClaimUuidUrl, Responder: testutils.MigrationClaimOneResponder(store.CLAIMED)},
 		}, expected: "Work item claimed"},
-		{name: "unable to claim from uuid (invalid state)", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr}...), endpoints: []testutils.HttpResponder{
-			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-		}, err: "invalid state"},
 		{name: "unable to claim from uuid (not found)", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr}...), endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.NotFoundResponder},
+			{Method: "PUT", Url: "=~^" + testutils.ClaimUuidUrl, Responder: testutils.NotFoundResponder},
 		}, err: "response status code: 404"},
-		{name: "force claim from uuid", args: append(neighborhoodArg, []string{"--uuid", testutils.DummyUUIDStr, "--force"}...), endpoints: []testutils.HttpResponder{
-			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MustMigrationGetResponder(store.FAILED)},
-			{Method: "PUT", Url: "=~^" + testutils.MigrationUrl, Responder: testutils.MigrationUpdateResponder},
-		}, expected: "forcing re-claim of work item"},
 	}
 	for _, tc := range tt {
 		command := &cobra.Command{Use: "claim", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.ClaimCmdRunE}
@@ -93,8 +74,6 @@ func TestClaimCmd(t *testing.T) {
 
 		// Enable http mocking on the resty client
 		httpmock.ActivateNonDefault(client.GetClient())
-		defer httpmock.DeactivateAndReset()
-
 		cmd.SetupRootCmdFlags(command)
 		cmd.SetupClaimCmdFlags(command)
 
@@ -111,6 +90,7 @@ func TestClaimCmd(t *testing.T) {
 			} else {
 				require.ErrorContains(t, err, tc.err)
 			}
+			httpmock.Reset()
 		})
 
 		// Remove the work item file if it exists
