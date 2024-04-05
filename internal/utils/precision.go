@@ -40,7 +40,7 @@ func ConvertPrecision(n string, currentPrecision uint64, targetPrecision uint64)
 	slog.Debug("Multiplier", "multiplier", multiplier)
 
 	var result *big.Int
-	if precisionDiff > 0 {
+	if precisionDiff < 0 {
 		//	// Increase precision by multiplying
 		result = new(big.Int).Mul(bi, multiplier)
 	} else {

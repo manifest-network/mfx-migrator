@@ -69,15 +69,8 @@ func TestMigrateOnChain(t *testing.T) {
 		"--chain-home", tmpdir,
 	}
 
-	defaultGenesisAmtMinOne := DefaultGenesisAmt.Sub(math.NewInt(1))  // Genesis amount - 1
-	defaultGenesisAmtPlusOne := DefaultGenesisAmt.Add(math.NewInt(1)) // Genesis amount + 1
-	currentPrecision := 9                                             // The precision of the "MANY" token
-	targetPrecision := 6                                              // The precision of the "MANIFEST" token
-	precision := currentPrecision - targetPrecision                   // The precision difference
-	multiplier := math.NewIntWithDecimal(1, precision)                // 1e${precision}
-
-	defaultGenesisAmtPlusOneTargetPrec := defaultGenesisAmtPlusOne.Mul(multiplier).String()
-	defaultGenesisAmtMinOneTargetPrec := defaultGenesisAmtMinOne.Mul(multiplier).String()
+	defaultGenesisAmtPlusThousand := DefaultGenesisAmt.Add(math.NewInt(1000)) // Genesis amount + 1000
+	defaultGenesisAmtMinThousand := DefaultGenesisAmt.Sub(math.NewInt(1000))  // Genesis amount - 1000
 
 	tt := []struct {
 		name      string
@@ -86,41 +79,41 @@ func TestMigrateOnChain(t *testing.T) {
 		expected  Expected
 		endpoints []testutils.HttpResponder
 	}{
-		{name: "0 token after conversion", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "1:1000 tokens", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
-			Bank: Amounts{Old: DefaultGenesisAmt},
-			User: Amounts{Old: math.ZeroInt()},
-		}, err: "amount after conversion is less than or equal to 0"},
+			Bank: Amounts{Old: DefaultGenesisAmt, New: defaultGenesisAmtMinThousand},
+			User: Amounts{Old: math.ZeroInt(), New: math.NewInt(1000)},
+		}},
 		{name: "insufficient funds", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtPlusOneTargetPrec)},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtPlusThousand.String())},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
-			Bank: Amounts{Old: DefaultGenesisAmt},
-			User: Amounts{Old: math.ZeroInt()},
+			Bank: Amounts{Old: defaultGenesisAmtMinThousand},
+			User: Amounts{Old: math.NewInt(1000)},
 		}, err: "insufficient funds"},
-		{name: "1000:1 tokens", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "amount after conversion is <= 0", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("1000")},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder("0")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
-			Bank: Amounts{Old: DefaultGenesisAmt, New: defaultGenesisAmtMinOne},
-			User: Amounts{Old: math.ZeroInt(), New: math.OneInt()},
-		}},
+			Bank: Amounts{Old: defaultGenesisAmtMinThousand},
+			User: Amounts{Old: math.NewInt(1000)},
+		}, err: "amount after conversion is less than or equal to 0"},
 		{name: "all tokens from bank", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtMinOneTargetPrec)},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewTransactionResponseResponder(defaultGenesisAmtMinThousand.Quo(math.NewInt(1000)).String())}, // (Genesis amount - 1000) / 1000
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
-			Bank: Amounts{Old: defaultGenesisAmtMinOne, New: math.ZeroInt()},
-			User: Amounts{Old: math.OneInt(), New: DefaultGenesisAmt},
+			Bank: Amounts{Old: defaultGenesisAmtMinThousand, New: math.ZeroInt()},
+			User: Amounts{Old: math.NewInt(1000), New: DefaultGenesisAmt},
 		}},
 	}
 
