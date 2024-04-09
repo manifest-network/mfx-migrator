@@ -26,34 +26,32 @@ type MultisigSubmitTransactionArguments struct {
 }
 
 type TxInfo struct {
-	Method    string `json:"method"`
-	Arguments []byte `json:"argument"`
+	Method    string          `json:"method"`
+	Arguments json.RawMessage `json:"argument"`
 }
 
 func GetTxInfo(r *resty.Client, hash string) (*Arguments, error) {
 	req := r.R().SetPathParam("thash", hash).SetResult(&TxInfo{})
 	resp, err := req.Get("neighborhoods/{neighborhood}/transactions/{thash}")
 	if err != nil {
-		return nil, errors.WithMessage(err, "error getting MANY tx info")
+		return nil, errors.WithMessage(err, "error unmarshalling MANY tx info")
 	}
 
 	txInfo := resp.Result().(*TxInfo)
 	if txInfo == nil {
-		return nil, fmt.Errorf("error unmarshalling MANY tx info")
+		return nil, fmt.Errorf("response not a MANY tx info")
 	}
 
 	switch txInfo.Method {
 	case "ledger.send":
 		var args Arguments
-		err = json.Unmarshal(txInfo.Arguments, &args)
-		if err != nil {
+		if err := json.Unmarshal(txInfo.Arguments, &args); err != nil {
 			return nil, errors.WithMessage(err, "error unmarshalling ledger.send tx arguments")
 		}
 		return &args, nil
 	case "account.multisigSubmitTransaction":
 		var args MultisigSubmitTransactionArguments
-		err = json.Unmarshal(txInfo.Arguments, &args)
-		if err != nil {
+		if err := json.Unmarshal(txInfo.Arguments, &args); err != nil {
 			return nil, errors.WithMessage(err, "error unmarshalling multisigSubmitTransaction tx arguments")
 		}
 		return &args.Transaction.Arguments, nil
