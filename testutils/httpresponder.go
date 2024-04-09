@@ -33,15 +33,45 @@ type HttpResponder struct {
 
 var AuthResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]string{"access_token": "ya29.Gl0UBZ3"})
 
-func MustNewTransactionResponseResponder(amount string) httpmock.Responder {
-	response := many.TxInfo{Arguments: many.Arguments{
+func MustNewLedgerSendTransactionResponseResponder(amount string) httpmock.Responder {
+	args := many.Arguments{
 		From:   ManyFrom,
 		To:     many.IllegalAddr,
 		Amount: amount,
 		Symbol: ManySymbol,
 		Memo:   []string{Uuid, ManifestAddress},
-	}}
-	var transactionResponseResponder, err = httpmock.NewJsonResponder(http.StatusOK, response)
+	}
+	jsonData, err := json.Marshal(args)
+	if err != nil {
+		panic(err)
+	}
+	response := many.TxInfo{Method: "ledger.send", Arguments: jsonData}
+	transactionResponseResponder, err := httpmock.NewJsonResponder(http.StatusOK, response)
+	if err != nil {
+		panic(err)
+	}
+	return transactionResponseResponder
+}
+
+func MustNewMultisigTransactionResponseResponder(amount string) httpmock.Responder {
+	args := many.Arguments{
+		From:   ManyFrom,
+		To:     many.IllegalAddr,
+		Amount: amount,
+		Symbol: ManySymbol,
+		Memo:   []string{Uuid, ManifestAddress},
+	}
+	mArgs := many.MultisigSubmitTransactionArguments{
+		Transaction: many.MultisigSubmitTransaction{
+			Arguments: args,
+		},
+	}
+	jsonData, err := json.Marshal(mArgs)
+	if err != nil {
+		panic(err)
+	}
+	response := many.TxInfo{Method: "account.multisigSubmitTransaction", Arguments: jsonData}
+	transactionResponseResponder, err := httpmock.NewJsonResponder(http.StatusOK, response)
 	if err != nil {
 		panic(err)
 	}

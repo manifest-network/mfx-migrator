@@ -1,8 +1,8 @@
 package many
 
 import (
+	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
@@ -17,11 +17,20 @@ type Arguments struct {
 	Memo   []string `json:"memo"`
 }
 
-type TxInfo struct {
+type MultisigSubmitTransaction struct {
 	Arguments Arguments `json:"argument"`
 }
 
-func GetTxInfo(r *resty.Client, hash string) (*TxInfo, error) {
+type MultisigSubmitTransactionArguments struct {
+	Transaction MultisigSubmitTransaction `json:"transaction"`
+}
+
+type TxInfo struct {
+	Method    string `json:"method"`
+	Arguments []byte `json:"argument"`
+}
+
+func GetTxInfo(r *resty.Client, hash string) (*Arguments, error) {
 	req := r.R().SetPathParam("thash", hash).SetResult(&TxInfo{})
 	resp, err := req.Get("neighborhoods/{neighborhood}/transactions/{thash}")
 	if err != nil {
@@ -29,33 +38,50 @@ func GetTxInfo(r *resty.Client, hash string) (*TxInfo, error) {
 	}
 
 	txInfo := resp.Result().(*TxInfo)
-	if txInfo == nil || (txInfo != nil && txInfo.Arguments.From == "") {
+	if txInfo == nil {
 		return nil, fmt.Errorf("error unmarshalling MANY tx info")
 	}
-	slog.Debug("MANY tx info", "txInfo", txInfo)
-	return txInfo, nil
+
+	switch txInfo.Method {
+	case "ledger.send":
+		var args Arguments
+		err = json.Unmarshal(txInfo.Arguments, &args)
+		if err != nil {
+			return nil, errors.WithMessage(err, "error unmarshalling ledger.send tx arguments")
+		}
+		return &args, nil
+	case "account.multisigSubmitTransaction":
+		var args MultisigSubmitTransactionArguments
+		err = json.Unmarshal(txInfo.Arguments, &args)
+		if err != nil {
+			return nil, errors.WithMessage(err, "error unmarshalling multisigSubmitTransaction tx arguments")
+		}
+		return &args.Transaction.Arguments, nil
+	default:
+		return nil, fmt.Errorf("unsupported MANY tx method: %s", txInfo.Method)
+	}
 }
 
-func CheckTxInfo(txInfo *TxInfo, itemUUID uuid.UUID, manifestAddr string) error {
+func CheckTxInfo(txArgs *Arguments, itemUUID uuid.UUID, manifestAddr string) error {
 	// Check the MANY transaction `To` address
-	if txInfo.Arguments.To != IllegalAddr {
-		return fmt.Errorf("invalid MANY tx `to` address: %s", txInfo.Arguments.To)
+	if txArgs.To != IllegalAddr {
+		return fmt.Errorf("invalid MANY tx `to` address: %s", txArgs.To)
 	}
 
 	// Check the MANY transaction `Memo`
-	if len(txInfo.Arguments.Memo) != 2 {
-		return fmt.Errorf("invalid MANY Memo length: %d", len(txInfo.Arguments.Memo))
+	if len(txArgs.Memo) != 2 {
+		return fmt.Errorf("invalid MANY Memo length: %d", len(txArgs.Memo))
 	}
 
 	// Check the MANY transaction UUID
-	txUUID, err := uuid.Parse(txInfo.Arguments.Memo[0])
+	txUUID, err := uuid.Parse(txArgs.Memo[0])
 	if err != nil {
-		return errors.WithMessagef(err, "invalid MANY tx UUID: %s", txInfo.Arguments.Memo[0])
+		return errors.WithMessagef(err, "invalid MANY tx UUID: %s", txArgs.Memo[0])
 	}
 
 	// Check the Manifest destination address
-	if txInfo.Arguments.Memo[1] != manifestAddr {
-		return fmt.Errorf("invalid manifest destination address: %s", txInfo.Arguments.Memo[1])
+	if txArgs.Memo[1] != manifestAddr {
+		return fmt.Errorf("invalid manifest destination address: %s", txArgs.Memo[1])
 	}
 
 	// Check the MANY transaction UUID matches the work item UUID

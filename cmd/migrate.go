@@ -179,27 +179,27 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 		return errors.WithMessage(err, "error comparing items")
 	}
 
-	txInfo, err := many.GetTxInfo(r, item.ManyHash)
+	txArgs, err := many.GetTxInfo(r, item.ManyHash)
 	if err != nil {
 		return errors.WithMessage(err, "error getting MANY tx info")
 	}
 
 	// Check the MANY transaction info
-	if err = many.CheckTxInfo(txInfo, item.UUID, item.ManifestAddress); err != nil {
+	if err = many.CheckTxInfo(txArgs, item.UUID, item.ManifestAddress); err != nil {
 		return errors.WithMessage(err, "error checking MANY tx info")
 	}
 
 	// Map the MANY token symbol to the destination chain token
-	tokenInfo, err := mapToken(txInfo.Arguments.Symbol, config.TokenMap)
+	tokenInfo, err := mapToken(txArgs.Symbol, config.TokenMap)
 	if err != nil {
 		return errors.WithMessage(err, "error mapping token")
 	}
 
-	slog.Debug("Amount before conversion", "amount", txInfo.Arguments.Amount)
+	slog.Debug("Amount before conversion", "amount", txArgs.Amount)
 
 	// Convert the amount to the destination chain precision
 	// NOTE: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
-	amount, err := utils.ConvertPrecision(txInfo.Arguments.Amount, 9, tokenInfo.Precision)
+	amount, err := utils.ConvertPrecision(txArgs.Amount, 9, tokenInfo.Precision)
 	if err != nil {
 		return errors.WithMessage(err, "error converting token to destination precision")
 	}
