@@ -197,13 +197,6 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 
 	slog.Debug("Amount before conversion", "amount", txArgs.Amount)
 
-	// Convert the amount to the destination chain precision
-	// NOTE: currentPrecision is hardcoded to 9 for now as all tokens on the MANY network have 9 digits places
-	amount, err := utils.ConvertPrecision(txArgs.Amount, 9, tokenInfo.Precision)
-	if err != nil {
-		return errors.WithMessage(err, "error converting token to destination precision")
-	}
-
 	var newItem = *item
 
 	// If the item status is not MIGRATING, set it to MIGRATING
@@ -211,6 +204,12 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 		if err = setAsMigrating(r, newItem); err != nil {
 			return errors.WithMessage(err, "could not set status to MIGRATING")
 		}
+	}
+
+	amount := new(big.Int)
+	_, ok := amount.SetString(txArgs.Amount, 10)
+	if !ok {
+		return fmt.Errorf("error parsing big.Int: %s", txArgs.Amount)
 	}
 
 	// Send the tokens
