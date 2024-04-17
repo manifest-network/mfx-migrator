@@ -26,7 +26,7 @@ func SetupWorkItem(t *testing.T) {
 	}
 
 	viper.Set("token-map", map[string]utils.TokenInfo{
-		"dummy": {Denom: "umfx", Precision: 6},
+		"dummy": {Denom: "umfx"},
 	})
 
 	// Some item
