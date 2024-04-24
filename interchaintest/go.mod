@@ -16,15 +16,15 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/jarcoal/httpmock v1.3.1
-	github.com/liftedinit/manifest-ledger v0.0.0-20240314224639-e2635faa7017
-	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240314224639-e2635faa7017
+	github.com/liftedinit/manifest-ledger v0.0.1-alpha.3.0.20240423195748-6a7913ea4534
+	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240423195748-6a7913ea4534
 	github.com/liftedinit/mfx-migrator v0.0.0-00000000000000-000000000000
 	github.com/spf13/cobra v1.8.0
-	github.com/strangelove-ventures/interchaintest/v8 v8.1.0
-	github.com/strangelove-ventures/poa v0.0.1-alpha.3
-	github.com/strangelove-ventures/tokenfactory v0.50.0-alpha.4
+	github.com/strangelove-ventures/interchaintest/v8 v8.2.0
+	github.com/strangelove-ventures/poa v0.50.0
+	github.com/strangelove-ventures/tokenfactory v0.50.0
 	github.com/stretchr/testify v1.9.0
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 )
 
 require (
@@ -103,7 +103,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/emicklei/dot v1.6.1 // indirect
-	github.com/ethereum/go-ethereum v1.13.8 // indirect
+	github.com/ethereum/go-ethereum v1.13.14 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -263,7 +263,7 @@ require (
 	modernc.org/opt v0.1.3 // indirect
 	modernc.org/sqlite v1.28.0 // indirect
 	modernc.org/strutil v1.1.3 // indirect
-	modernc.org/token v1.0.1 // indirect
+	modernc.org/token v1.1.0 // indirect
 	nhooyr.io/websocket v1.8.10 // indirect
 	pgregory.net/rapid v1.1.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
