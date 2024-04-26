@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o mfx-migrator .
 FROM debian:buster-slim
 
 # Install cron to schedule the job.
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cron jq && rm -rf /var/lib/apt/lists/*
 
 # The application configuration file should be stored in /mfx-migrator
 VOLUME /mfx-migrator
