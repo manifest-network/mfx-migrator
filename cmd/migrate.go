@@ -112,6 +112,7 @@ func setupStringCmdFlags(command *cobra.Command) {
 		{"bank-address", "bank-address", "bank", "Bank address to send tokens from", false},
 		{"chain-home", "chain-home", "", "Root directory of the chain configuration", false},
 		{"uuid", "migrate-uuid", "", "UUID of the work item to migrate", true},
+		{"binary", "binary", "manifestd", "Binary name of the blockchain to migrate to", false},
 	}
 
 	for _, arg := range args {
@@ -195,7 +196,7 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 		return errors.WithMessage(err, "error mapping token")
 	}
 
-	slog.Debug("Amount before conversion", "amount", txArgs.Amount)
+	slog.Debug("Amount", "amount", txArgs.Amount)
 
 	var newItem = *item
 

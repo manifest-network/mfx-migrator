@@ -115,5 +115,6 @@ func LoadMigrationConfigFromCLI() config.MigrateConfig {
 		TokenMap:         tokenMap,
 		WaitTxTimeout:    viper.GetUint("wait-for-tx-timeout"),
 		WaitBlockTimeout: viper.GetUint("wait-for-block-timeout"),
+		Binary:           viper.GetString("binary"),
 	}
 }
