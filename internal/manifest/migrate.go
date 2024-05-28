@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/liftedinit/mfx-migrator/internal/config"
 	"github.com/pkg/errors"
 
@@ -66,11 +65,11 @@ type CosmosTx struct {
 }
 
 type EventQueryTxFor struct {
-	Height int64 `json:"height"`
+	Height string `json:"height"`
 }
 
 // Migrate migrates the given amount of tokens to the specified address.
-func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom string, amount *big.Int) (*sdk.TxResponse, *time.Time, error) {
+func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom string, amount *big.Int) (*CosmosTx, *time.Time, error) {
 	// Run the command to send the tokens
 	cmd := exec.Command(migrateConfig.Binary, "tx", "bank", "send",
 		migrateConfig.BankAddress,
@@ -115,7 +114,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
 
-	var res sdk.TxResponse
+	var res EventQueryTxFor
 	if err := json.Unmarshal(o, &res); err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to unmarshal response")
 	}
@@ -167,7 +166,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	//
 	//return res, blockTime, nil
 
-	return &res, nil, nil
+	return &tx, nil, nil
 }
 
 // getAccountInfo retrieves account information from the keyring.
