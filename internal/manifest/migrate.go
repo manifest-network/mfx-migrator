@@ -79,6 +79,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		"--gas-adjustment", "1.3",
 		"--output", "json",
 		"--yes")
+	slog.Info("Transaction command", "command", cmd.String())
 	o, err := cmd.Output()
 	slog.Info("Transaction output", "output", string(o))
 	if err != nil {
@@ -102,6 +103,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
 		"--output", "json")
+	slog.Info("Waiting for transaction", "command", cmd.String())
 	o, err = cmd.Output()
 	slog.Info("Transaction included in block", "output", string(o))
 	if err != nil {
