@@ -68,7 +68,7 @@ type CosmosTx struct {
 // Migrate migrates the given amount of tokens to the specified address.
 func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom string, amount *big.Int) (*sdk.TxResponse, *time.Time, error) {
 	// Run the command to send the tokens
-	cmd := exec.Command("/bin/sh", "-c", migrateConfig.Binary, "tx", "bank", "send",
+	cmd := exec.Command(migrateConfig.Binary, "tx", "bank", "send",
 		migrateConfig.BankAddress,
 		item.ManifestAddress, amount.String()+denom,
 		"--chain-id", migrateConfig.ChainID,
@@ -98,7 +98,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	}
 
 	// Wait for the transaction to be included in a block
-	cmd = exec.Command("/bin/sh", "-c", migrateConfig.Binary, "q", "wait-tx",
+	cmd = exec.Command(migrateConfig.Binary, "q", "wait-tx",
 		tx.TxHash,
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
