@@ -98,7 +98,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	}
 
 	// Wait for the transaction to be included in a block
-	cmd = exec.Command(migrateConfig.Binary, "q", "wait-tx",
+	cmd = exec.Command(migrateConfig.Binary, "q", "event-query-tx-for",
 		tx.TxHash,
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
