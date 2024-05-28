@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math/big"
 	"os/exec"
@@ -120,7 +119,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	}
 
 	cmd = exec.Command(migrateConfig.Binary, "q", "block",
-		"--type", "height", fmt.Sprintf("%d", res.Height),
+		"--type", "height", res.Height,
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
 		"--output", "json")
