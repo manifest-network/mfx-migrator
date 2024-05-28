@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math/big"
 	"os/exec"
@@ -102,13 +101,12 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		tx.TxHash,
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
-		"--timeout", fmt.Sprintf("%ds", migrateConfig.WaitTxTimeout),
 		"--output", "json")
 	o, err = cmd.Output()
+	slog.Info("Transaction included in block", "output", string(o))
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
-	slog.Info("Transaction included in block", "output", string(o))
 
 	//
 	//c := sdk.GetConfig()
