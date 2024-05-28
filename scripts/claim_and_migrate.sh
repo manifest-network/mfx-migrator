@@ -13,6 +13,8 @@ find . -name '*.json' ! -name "config.json" -print0 | xargs -0 -I{} -P 1 bash -c
 
 # Check each JSON file for a failed status and a non-empty error
 for file in *.json; do
+    [[ -e "$f" ]] || break # Exit if no files found
+
     if [ "$file" == "config.json" ]; then
         continue
     fi
