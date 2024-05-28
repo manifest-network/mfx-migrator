@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"os/exec"
@@ -64,6 +65,10 @@ type CosmosTx struct {
 	RawLog string `json:"raw_log"`
 }
 
+type EventQueryTxFor struct {
+	Height int64 `json:"height"`
+}
+
 // Migrate migrates the given amount of tokens to the specified address.
 func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom string, amount *big.Int) (*sdk.TxResponse, *time.Time, error) {
 	// Run the command to send the tokens
@@ -110,6 +115,23 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
 
+	var res sdk.TxResponse
+	if err := json.Unmarshal(o, &res); err != nil {
+		return nil, nil, errors.WithMessage(err, "failed to unmarshal response")
+	}
+
+	cmd = exec.Command(migrateConfig.Binary, "q", "block",
+		"--type", "height", fmt.Sprintf("%d", res.Height),
+		"--node", migrateConfig.NodeAddress,
+		"--home", migrateConfig.ChainHome,
+		"--output", "json")
+	slog.Info("Fetching block", "command", cmd.String())
+	o, err = cmd.Output()
+	slog.Info("Block fetched", "output", string(o))
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "failed to fetch block")
+	}
+
 	//
 	//c := sdk.GetConfig()
 	//c.SetBech32PrefixForAccount(migrateConfig.AddressPrefix, migrateConfig.AddressPrefix+"pub")
@@ -145,7 +167,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	//
 	//return res, blockTime, nil
 
-	return nil, nil, nil
+	return &res, nil, nil
 }
 
 // getAccountInfo retrieves account information from the keyring.
