@@ -44,9 +44,9 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		"--gas-adjustment", "1.3",
 		"--output", "json",
 		"--yes")
-	slog.Info("Transaction command", "command", cmd.String())
+	slog.Debug("Transaction command", "command", cmd.String())
 	o, err := cmd.Output()
-	slog.Info("Transaction output", "output", string(o))
+	slog.Debug("Transaction output", "output", string(o))
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to execute send command")
 	}
@@ -68,9 +68,9 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
 		"--output", "json")
-	slog.Info("Waiting for transaction", "command", cmd.String())
+	slog.Debug("Waiting for transaction", "command", cmd.String())
 	o, err = cmd.Output()
-	slog.Info("Transaction included in block", "output", string(o))
+	slog.Debug("Transaction included in block", "output", string(o))
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
@@ -85,9 +85,9 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		"--node", migrateConfig.NodeAddress,
 		"--home", migrateConfig.ChainHome,
 		"--output", "json")
-	slog.Info("Fetching block", "command", cmd.String())
+	slog.Debug("Fetching block", "command", cmd.String())
 	o, err = cmd.Output()
-	slog.Info("Block fetched", "output", string(o))
+	slog.Debug("Block fetched", "output", string(o))
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to fetch block")
 	}
