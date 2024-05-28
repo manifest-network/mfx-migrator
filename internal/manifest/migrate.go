@@ -81,6 +81,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		"--output", "json",
 		"--yes")
 	o, err := cmd.Output()
+	slog.Info("Transaction output", "output", string(o))
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to execute send command")
 	}
