@@ -31,7 +31,8 @@ jobs:
           name: Install manifestd from manifest-ledger Docker image
           command: |
             id=$(docker create ghcr.io/liftedinit/manifest-ledger:v0.0.1-alpha)
-            docker cp $id:/usr/bin/manifestd /usr/local/bin/manifestd
+            docker cp $id:/usr/bin/manifestd /tmp/manifestd
+            sudo mv /tmp/manifestd /usr/local/bin/
             docker rm -v $id
       - run: make test
       - run: make coverage
