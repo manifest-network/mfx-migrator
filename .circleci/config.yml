@@ -2,6 +2,7 @@
 # The Lifted Initiative
 version: 2.1
 
+MANIFESTD_VERSION: &manifestd_version '0.0.1-alpha.6'
 GO_VERSION: &go_version '1.22.2'
 GORELEASER_VERSION: &goreleaser_version 'v1.25.1'
 GO_MOD_CACHE_KEY: &go_mod_cache_key 'go-mod-2'
@@ -24,6 +25,11 @@ jobs:
       - go/mod-download
       - go/save-cache:
             key: *go_mod_cache_key
+      - run:
+          name: Install manifestd
+          command: |
+            wget -c https://github.com/liftedinit/manifest-ledger/releases/download/v*manifestd_version*/manifest-ledger_*manifestd_version*_linux_amd64.tar.gz -O - | tar -xz manifestd
+            mv manifestd /usr/local/bin
       - run: make test
       - run: make coverage
       - codecov/upload:
