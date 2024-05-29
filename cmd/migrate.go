@@ -266,7 +266,16 @@ func setAsCompleted(r *resty.Client, newItem store.WorkItem, txHash *string, blo
 
 func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error {
 	newItem.Status = store.FAILED
+
+	// Truncate the error string if it is too long (Talib limitation)
+	maxLen := 8192
+	if len(*errStr) > maxLen {
+		// errStr should be at most 8191 characters long
+		almostHalf := maxLen/2 - 2
+		*errStr = (*errStr)[:almostHalf] + " ... " + (*errStr)[len(*errStr)-almostHalf:]
+	}
 	newItem.Error = errStr
+
 	if err := store.UpdateWorkItemAndSaveState(r, newItem); err != nil {
 		return errors.WithMessage(err, "error setting status to FAILED")
 	}

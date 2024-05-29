@@ -67,6 +67,7 @@ func TestMigrateOnChain(t *testing.T) {
 		"--keyring-backend", "test",
 		"--bank-address", user1.KeyName(),
 		"--chain-home", tmpdir,
+		"--binary", "manifestd",
 	}
 
 	defaultGenesisAmtPlusThousand := DefaultGenesisAmt.Add(math.NewInt(1000)) // Genesis amount + 1000
@@ -140,7 +141,8 @@ func TestMigrateOnChain(t *testing.T) {
 			require.Equal(t, balanceUO, tc.expected.User.Old)
 
 			// Execute the migration
-			_, err = testutils.Execute(t, command, tc.args...)
+			o, err := testutils.Execute(t, command, tc.args...)
+			t.Log(string(o))
 			if tc.err != "" {
 				require.ErrorContains(t, err, tc.err)
 
