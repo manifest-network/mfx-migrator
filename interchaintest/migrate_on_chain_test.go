@@ -141,8 +141,7 @@ func TestMigrateOnChain(t *testing.T) {
 			require.Equal(t, balanceUO, tc.expected.User.Old)
 
 			// Execute the migration
-			o, err := testutils.Execute(t, command, tc.args...)
-			t.Log(string(o))
+			_, err = testutils.Execute(t, command, tc.args...)
 			if tc.err != "" {
 				require.ErrorContains(t, err, tc.err)
 
