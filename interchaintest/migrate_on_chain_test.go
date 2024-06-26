@@ -67,6 +67,7 @@ func TestMigrateOnChain(t *testing.T) {
 		"--keyring-backend", "test",
 		"--bank-address", user1.KeyName(),
 		"--chain-home", tmpdir,
+		"--gas-price", "0",
 		"--binary", "manifestd",
 	}
 

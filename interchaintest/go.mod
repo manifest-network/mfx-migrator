@@ -1,6 +1,6 @@
 module github.com/liftedinit/mfx-migrator/interchaintest
 
-go 1.22.3
+go 1.22.4
 
 replace (
 	cosmossdk.io/core => cosmossdk.io/core v0.11.0 // proper SDK v50 version
@@ -16,8 +16,6 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/jarcoal/httpmock v1.3.1
-	github.com/liftedinit/manifest-ledger v0.0.1-alpha.3.0.20240423195748-6a7913ea4534
-	github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240423195748-6a7913ea4534
 	github.com/liftedinit/mfx-migrator v0.0.0-00000000000000-000000000000
 	github.com/spf13/cobra v1.8.0
 	github.com/strangelove-ventures/interchaintest/v8 v8.2.0
@@ -143,6 +141,7 @@ require (
 	github.com/hashicorp/go-metrics v0.5.2 // indirect
 	github.com/hashicorp/go-plugin v1.5.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
+	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

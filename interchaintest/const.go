@@ -2,7 +2,6 @@ package interchaintest
 
 import (
 	sdkmath "cosmossdk.io/math"
-	"github.com/liftedinit/manifest-ledger/x/manifest/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
@@ -21,7 +20,7 @@ const (
 	chainName          = "manifest-ledger"
 	chainID            = "manifest-2"
 	chainRepository    = "ghcr.io/liftedinit/manifest-ledger"
-	chainVersion       = "v0.0.1-alpha"
+	chainVersion       = "v0.0.1-alpha.10"
 )
 
 var (
@@ -40,11 +39,6 @@ var (
 		cosmos.NewGenesisKV("app_state.poa.params.admins", []string{cosmosGovModuleAcc, accAddr}),
 		// Mint - this is the only param the manifest module depends on from mint
 		cosmos.NewGenesisKV("app_state.mint.params.blocks_per_year", "6311520"),
-		// Manifest
-		cosmos.NewGenesisKV("app_state.manifest.params.stake_holders", types.NewStakeHolders(types.NewStakeHolder(acc2Addr, 100_000_000))), // 100% of the inflation payout goes to them
-		cosmos.NewGenesisKV("app_state.manifest.params.inflation.automatic_enabled", true),
-		cosmos.NewGenesisKV("app_state.manifest.params.inflation.mint_denom", Denom),
-		cosmos.NewGenesisKV("app_state.manifest.params.inflation.yearly_amount", "500000000000"), // in micro denom
 	}
 
 	LocalChainConfig = ibc.ChainConfig{

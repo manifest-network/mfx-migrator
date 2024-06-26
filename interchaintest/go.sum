@@ -800,10 +800,6 @@ github.com/libp2p/go-buffer-pool v0.1.0 h1:oK4mSFcQz7cTQIfqbe4MIj9gLW+mnanjyFtc6
 github.com/libp2p/go-buffer-pool v0.1.0/go.mod h1:N+vh8gMqimBzdKkSMVuydVDq+UV5QTWy5HSiZacSbPg=
 github.com/libp2p/go-libp2p v0.31.0 h1:LFShhP8F6xthWiBBq3euxbKjZsoRajVEyBS9snfHxYg=
 github.com/libp2p/go-libp2p v0.31.0/go.mod h1:W/FEK1c/t04PbRH3fA9i5oucu5YcgrG0JVoBWT1B7Eg=
-github.com/liftedinit/manifest-ledger v0.0.1-alpha.3.0.20240423195748-6a7913ea4534 h1:CExHmbR9Ng+SsaSvc18dMCJqrbzC7f7mweqzKHzLgE8=
-github.com/liftedinit/manifest-ledger v0.0.1-alpha.3.0.20240423195748-6a7913ea4534/go.mod h1:XAEG3AQ1lAuuvQ24wh7EvWbZkw530kMDwE+zUrVJHu0=
-github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240423195748-6a7913ea4534 h1:oFapAXifMnrrteimLAFVrWB6T3wQedkF9Er8qqx1su0=
-github.com/liftedinit/manifest-ledger/interchaintest v0.0.0-20240423195748-6a7913ea4534/go.mod h1:eWk7vwi6IRGZmNF9zRxjQctRJN1/QaXoE2CRtBPNQFI=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
 github.com/linxGnu/grocksdb v1.8.12 h1:1/pCztQUOa3BX/1gR3jSZDoaKFpeHFvQ1XrqZpSvZVo=
