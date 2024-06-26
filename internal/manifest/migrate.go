@@ -20,9 +20,8 @@ const (
 )
 
 var (
-	gas           = []string{"--gas", "auto"}
-	gasAdjustment = []string{"--gas-adjustment", "1.3"}
-	yes           = []string{"--yes"}
+	gas = []string{"--gas", "auto"}
+	yes = []string{"--yes"}
 )
 
 type CosmosTx struct {
@@ -75,6 +74,8 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	keyringBackend := []string{"--keyring-backend", migrateConfig.KeyringBackend}
 	home := []string{"--home", migrateConfig.ChainHome}
 	from := []string{"--from", migrateConfig.BankAddress}
+	gasAdjustment := []string{"--gas-adjustment", fmt.Sprintf("%f", migrateConfig.GasAdjustment)}
+	gasPrice := []string{"--gas-prices", fmt.Sprintf("%f", migrateConfig.GasPrice) + denom}
 	output := []string{"--output", OutputFormat}
 
 	// Send the tokens to the manifest address
@@ -86,6 +87,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	txSend = append(txSend, from...)
 	txSend = append(txSend, gas...)
 	txSend = append(txSend, gasAdjustment...)
+	txSend = append(txSend, gasPrice...)
 	txSend = append(txSend, output...)
 	txSend = append(txSend, yes...)
 	o, err := executeCommand(migrateConfig.Binary, txSend...)

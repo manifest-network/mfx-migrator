@@ -116,5 +116,7 @@ func LoadMigrationConfigFromCLI() config.MigrateConfig {
 		WaitTxTimeout:    viper.GetUint("wait-for-tx-timeout"),
 		WaitBlockTimeout: viper.GetUint("wait-for-block-timeout"),
 		Binary:           viper.GetString("binary"),
+		GasAdjustment:    viper.GetFloat64("gas-adjustment"),
+		GasPrice:         viper.GetFloat64("gas-price"),
 	}
 }

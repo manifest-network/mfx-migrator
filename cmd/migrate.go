@@ -145,12 +145,31 @@ func setupUIntCmdFlags(command *cobra.Command) {
 			slog.Error(ErrorBindingFlag, "error", err)
 		}
 	}
+}
 
+func setupFloatCmdFlags(command *cobra.Command) {
+	args := []struct {
+		name  string
+		key   string
+		value float64
+		usage string
+	}{
+		{"gas-price", "gas-price", 0.0011, "Minimum gas price to use for transactions"},
+		{"gas-adjustment", "gas-adjustment", 1.2, "Gas adjustment to use for transactions"},
+	}
+
+	for _, arg := range args {
+		command.Flags().Float64(arg.name, arg.value, arg.usage)
+		if err := viper.BindPFlag(arg.key, command.Flags().Lookup(arg.name)); err != nil {
+			slog.Error(ErrorBindingFlag, "error", err)
+		}
+	}
 }
 
 func SetupMigrateCmdFlags(command *cobra.Command) {
 	setupStringCmdFlags(command)
 	setupUIntCmdFlags(command)
+	setupFloatCmdFlags(command)
 }
 
 func mapToken(symbol string, tokenMap map[string]utils.TokenInfo) (*utils.TokenInfo, error) {

@@ -81,6 +81,8 @@ type MigrateConfig struct {
 	WaitTxTimeout    uint                       // Number of seconds spent waiting for the transaction to be included in a block
 	WaitBlockTimeout uint                       // Number of seconds spent waiting for the block to be committed
 	Binary           string                     // Binary name of the destination blockchain
+	GasPrice         float64                    // Minimum gas price to use for transactions
+	GasAdjustment    float64                    // Gas adjustment to use for transactions
 }
 
 func (c MigrateConfig) Validate() error {
@@ -118,6 +120,14 @@ func (c MigrateConfig) Validate() error {
 
 	if c.Binary == "" {
 		return fmt.Errorf("binary is required")
+	}
+
+	if c.GasPrice < 0 {
+		return fmt.Errorf("gas price must be >= 0")
+	}
+
+	if c.GasAdjustment < 0 {
+		return fmt.Errorf("gas adjustment must be >= 0")
 	}
 
 	if _, err := exec.LookPath(c.Binary); err != nil {
