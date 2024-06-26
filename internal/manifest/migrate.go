@@ -75,7 +75,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	home := []string{"--home", migrateConfig.ChainHome}
 	from := []string{"--from", migrateConfig.BankAddress}
 	gasAdjustment := []string{"--gas-adjustment", fmt.Sprintf("%f", migrateConfig.GasAdjustment)}
-	gasPrice := []string{"--gas-prices", fmt.Sprintf("%f", migrateConfig.GasPrice) + denom}
+	gasPrice := []string{"--gas-prices", fmt.Sprintf("%f%s", migrateConfig.GasPrice, migrateConfig.GasDenom)}
 	output := []string{"--output", OutputFormat}
 
 	// Send the tokens to the manifest address

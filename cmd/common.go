@@ -118,5 +118,6 @@ func LoadMigrationConfigFromCLI() config.MigrateConfig {
 		Binary:           viper.GetString("binary"),
 		GasAdjustment:    viper.GetFloat64("gas-adjustment"),
 		GasPrice:         viper.GetFloat64("gas-price"),
+		GasDenom:         viper.GetString("gas-denom"),
 	}
 }

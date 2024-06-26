@@ -83,6 +83,7 @@ type MigrateConfig struct {
 	Binary           string                     // Binary name of the destination blockchain
 	GasPrice         float64                    // Minimum gas price to use for transactions
 	GasAdjustment    float64                    // Gas adjustment to use for transactions
+	GasDenom         string                     // Gas denomination to use for transactions
 }
 
 func (c MigrateConfig) Validate() error {
@@ -128,6 +129,10 @@ func (c MigrateConfig) Validate() error {
 
 	if c.GasAdjustment < 0 {
 		return fmt.Errorf("gas adjustment must be >= 0")
+	}
+
+	if c.GasDenom == "" {
+		return fmt.Errorf("gas denom is required")
 	}
 
 	if _, err := exec.LookPath(c.Binary); err != nil {

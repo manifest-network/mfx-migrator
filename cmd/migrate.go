@@ -113,6 +113,7 @@ func setupStringCmdFlags(command *cobra.Command) {
 		{"chain-home", "chain-home", "", "Root directory of the chain configuration", false},
 		{"uuid", "migrate-uuid", "", "UUID of the work item to migrate", true},
 		{"binary", "binary", "manifestd", "Binary name of the blockchain to migrate to", false},
+		{"gas-denom", "gas-denom", "umfx", "Denomination of the gas price", false},
 	}
 
 	for _, arg := range args {
