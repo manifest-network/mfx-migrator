@@ -112,6 +112,8 @@ func setupStringCmdFlags(command *cobra.Command) {
 		{"bank-address", "bank-address", "bank", "Bank address to send tokens from", false},
 		{"chain-home", "chain-home", "", "Root directory of the chain configuration", false},
 		{"uuid", "migrate-uuid", "", "UUID of the work item to migrate", true},
+		{"binary", "binary", "manifestd", "Binary name of the blockchain to migrate to", false},
+		{"gas-denom", "gas-denom", "umfx", "Denomination of the gas price", false},
 	}
 
 	for _, arg := range args {
@@ -144,12 +146,31 @@ func setupUIntCmdFlags(command *cobra.Command) {
 			slog.Error(ErrorBindingFlag, "error", err)
 		}
 	}
+}
 
+func setupFloatCmdFlags(command *cobra.Command) {
+	args := []struct {
+		name  string
+		key   string
+		value float64
+		usage string
+	}{
+		{"gas-price", "gas-price", 0.0011, "Minimum gas price to use for transactions"},
+		{"gas-adjustment", "gas-adjustment", 1.2, "Gas adjustment to use for transactions"},
+	}
+
+	for _, arg := range args {
+		command.Flags().Float64(arg.name, arg.value, arg.usage)
+		if err := viper.BindPFlag(arg.key, command.Flags().Lookup(arg.name)); err != nil {
+			slog.Error(ErrorBindingFlag, "error", err)
+		}
+	}
 }
 
 func SetupMigrateCmdFlags(command *cobra.Command) {
 	setupStringCmdFlags(command)
 	setupUIntCmdFlags(command)
+	setupFloatCmdFlags(command)
 }
 
 func mapToken(symbol string, tokenMap map[string]utils.TokenInfo) (*utils.TokenInfo, error) {
@@ -195,7 +216,7 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 		return errors.WithMessage(err, "error mapping token")
 	}
 
-	slog.Debug("Amount before conversion", "amount", txArgs.Amount)
+	slog.Debug("Amount", "amount", txArgs.Amount)
 
 	var newItem = *item
 
@@ -265,7 +286,16 @@ func setAsCompleted(r *resty.Client, newItem store.WorkItem, txHash *string, blo
 
 func setAsFailed(r *resty.Client, newItem store.WorkItem, errStr *string) error {
 	newItem.Status = store.FAILED
+
+	// Truncate the error string if it is too long (Talib limitation)
+	maxLen := 8192
+	if len(*errStr) > maxLen {
+		// errStr should be at most 8191 characters long
+		almostHalf := maxLen/2 - 2
+		*errStr = (*errStr)[:almostHalf] + " ... " + (*errStr)[len(*errStr)-almostHalf:]
+	}
 	newItem.Error = errStr
+
 	if err := store.UpdateWorkItemAndSaveState(r, newItem); err != nil {
 		return errors.WithMessage(err, "error setting status to FAILED")
 	}

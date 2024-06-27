@@ -2,8 +2,8 @@
 # The Lifted Initiative
 version: 2.1
 
-GO_VERSION: &go_version '1.22.2'
-GORELEASER_VERSION: &goreleaser_version 'v1.25.1'
+GO_VERSION: &go_version '1.22.4'
+GORELEASER_VERSION: &goreleaser_version 'v1.26.2'
 GO_MOD_CACHE_KEY: &go_mod_cache_key 'go-mod-2'
 
 orbs:
@@ -24,6 +24,16 @@ jobs:
       - go/mod-download
       - go/save-cache:
             key: *go_mod_cache_key
+      - run:
+          name: Pull manifest-ledger Docker image
+          command: docker pull ghcr.io/liftedinit/manifest-ledger:v0.0.1-alpha.10
+      - run:
+          name: Install manifestd from manifest-ledger Docker image
+          command: |
+            id=$(docker create ghcr.io/liftedinit/manifest-ledger:v0.0.1-alpha.10)
+            docker cp $id:/usr/bin/manifestd /tmp/manifestd
+            sudo mv /tmp/manifestd /usr/local/bin/
+            docker rm -v $id
       - run: make test
       - run: make coverage
       - codecov/upload:

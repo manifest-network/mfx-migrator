@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/liftedinit/manifest-ledger/interchaintest/helpers"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	poatypes "github.com/strangelove-ventures/poa"
@@ -104,15 +103,6 @@ func setupUser(ctx context.Context, manifestA *cosmos.CosmosChain) (ibc.Wallet, 
 	return user1, nil
 }
 
-// checkGenesisDefault checks the default genesis parameters on chain
-func checkGenesisDefault(t *testing.T, node *cosmos.ChainNode) {
-	p, err := helpers.ManifestQueryParams(context.Background(), node)
-	require.NoError(t, err)
-	fmt.Println(p)
-	require.True(t, p.Inflation.AutomaticEnabled)
-	require.EqualValues(t, p.Inflation.MintDenom, Denom)
-}
-
 // SetupChain sets up an isolated chain for the test
 func SetupChain(t *testing.T, ctx context.Context) (*cosmos.CosmosChain, ibc.Wallet) {
 	cfgA := setupConfig()
@@ -124,10 +114,6 @@ func SetupChain(t *testing.T, ctx context.Context) (*cosmos.CosmosChain, ibc.Wal
 
 	user1, err := setupUser(ctx, manifestA)
 	require.NoError(t, err)
-
-	node := manifestA.GetNode()
-
-	checkGenesisDefault(t, node)
 
 	return manifestA, user1
 }

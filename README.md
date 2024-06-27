@@ -68,6 +68,7 @@ Flags:
 - `--keyring-backend string` - The keyring backend to use. Default is `test`.
 - `--node-address` - The RPC endpoint of the MANIFEST chain. Default is `http://localhost:26657`.
 - `--uuid string` - The UUID of the work item to migrate. Default is an empty string.
+- `--binary` - The name of the chain binary used to perform the migration. The binary must be in `$PATH`. Default is `manifestd`
 
 This command triggers a token transaction on the MANIFEST chain and updates the work item status in the remote database.
 

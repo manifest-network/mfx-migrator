@@ -67,6 +67,8 @@ func TestMigrateOnChain(t *testing.T) {
 		"--keyring-backend", "test",
 		"--bank-address", user1.KeyName(),
 		"--chain-home", tmpdir,
+		"--gas-price", "0",
+		"--binary", "manifestd",
 	}
 
 	defaultGenesisAmtPlusThousand := DefaultGenesisAmt.Add(math.NewInt(1000)) // Genesis amount + 1000

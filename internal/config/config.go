@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"os/exec"
 
 	"github.com/google/uuid"
 
@@ -79,6 +80,10 @@ type MigrateConfig struct {
 	TokenMap         map[string]utils.TokenInfo // Map of source token address to destination token info
 	WaitTxTimeout    uint                       // Number of seconds spent waiting for the transaction to be included in a block
 	WaitBlockTimeout uint                       // Number of seconds spent waiting for the block to be committed
+	Binary           string                     // Binary name of the destination blockchain
+	GasPrice         float64                    // Minimum gas price to use for transactions
+	GasAdjustment    float64                    // Gas adjustment to use for transactions
+	GasDenom         string                     // Gas denomination to use for transactions
 }
 
 func (c MigrateConfig) Validate() error {
@@ -112,6 +117,26 @@ func (c MigrateConfig) Validate() error {
 
 	if c.WaitBlockTimeout == 0 {
 		return fmt.Errorf("wait for block timeout > 0 is required")
+	}
+
+	if c.Binary == "" {
+		return fmt.Errorf("binary is required")
+	}
+
+	if c.GasPrice < 0 {
+		return fmt.Errorf("gas price must be >= 0")
+	}
+
+	if c.GasAdjustment < 0 {
+		return fmt.Errorf("gas adjustment must be >= 0")
+	}
+
+	if c.GasDenom == "" {
+		return fmt.Errorf("gas denom is required")
+	}
+
+	if _, err := exec.LookPath(c.Binary); err != nil {
+		return fmt.Errorf("binary %s not found in PATH", c.Binary)
 	}
 
 	return nil
