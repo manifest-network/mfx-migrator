@@ -20,7 +20,7 @@ const (
 	chainName          = "manifest-ledger"
 	chainID            = "manifest-2"
 	chainRepository    = "ghcr.io/liftedinit/manifest-ledger"
-	chainVersion       = "v0.0.1-alpha.10"
+	chainVersion       = "v0.0.1-alpha.12"
 )
 
 var (
@@ -35,8 +35,6 @@ var (
 		// TokenFactory
 		cosmos.NewGenesisKV("app_state.tokenfactory.params.denom_creation_fee", nil),
 		cosmos.NewGenesisKV("app_state.tokenfactory.params.denom_creation_gas_consume", "1"),
-		// PoA
-		cosmos.NewGenesisKV("app_state.poa.params.admins", []string{cosmosGovModuleAcc, accAddr}),
 		// Mint - this is the only param the manifest module depends on from mint
 		cosmos.NewGenesisKV("app_state.mint.params.blocks_per_year", "6311520"),
 	}
