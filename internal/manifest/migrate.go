@@ -114,6 +114,14 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 		return nil, nil, errors.WithMessage(err, "failed to wait for transaction")
 	}
 
+	var txWait CosmosTx
+	if err = unmarshalOutput(o, &txWait); err != nil {
+		return nil, nil, err
+	}
+	if txWait.Code != 0 {
+		return nil, nil, errors.Errorf("failed to execute transaction: %s", txWait.RawLog)
+	}
+
 	var res EventQueryTxFor
 	if err = unmarshalOutput(o, &res); err != nil {
 		return nil, nil, err
