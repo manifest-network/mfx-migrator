@@ -25,7 +25,8 @@ func TestMigrateCmd(t *testing.T) {
 	urlArg := append(slice, []string{"--url", testutils.RootUrl}...)
 	uuidArg := append(urlArg, []string{"--uuid", testutils.DummyUUIDStr}...)
 	chainHomeArg := append(uuidArg, []string{"--chain-home", "/tmp"}...)
-	usernameArg := append(chainHomeArg, []string{"--username", "user"}...)
+	feeGrantArg := append(chainHomeArg, []string{"--fee-granter", "feegranter"}...)
+	usernameArg := append(feeGrantArg, []string{"--username", "user"}...)
 	passwordArg := append(usernameArg, []string{"--password", "pass"}...)
 
 	pp := make([]string, len(passwordArg))
@@ -45,7 +46,8 @@ func TestMigrateCmd(t *testing.T) {
 		{name: "no argument", args: []string{}, err: "URL cannot be empty"},
 		{name: "uuid missing", args: urlArg, err: "required flag(s) \"uuid\" not set"},
 		{name: "chain home missing", args: uuidArg, err: "chain home is required"},
-		{name: "username missing", args: chainHomeArg, err: "username is required"},
+		{name: "feegrant missing", args: chainHomeArg, err: "fee granter is required"},
+		{name: "username missing", args: feeGrantArg, err: "username is required"},
 		{name: "password missing", args: usernameArg, err: "password is required"},
 
 		// Set defaults to empty strings

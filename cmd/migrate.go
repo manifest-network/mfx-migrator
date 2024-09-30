@@ -157,7 +157,7 @@ func setupFloatCmdFlags(command *cobra.Command) {
 		usage string
 	}{
 		{"gas-price", "gas-price", 0.0011, "Minimum gas price to use for transactions"},
-		{"gas-adjustment", "gas-adjustment", 1.2, "Gas adjustment to use for transactions"},
+		{"gas-adjustment", "gas-adjustment", 1.4, "Gas adjustment to use for transactions"},
 	}
 
 	for _, arg := range args {

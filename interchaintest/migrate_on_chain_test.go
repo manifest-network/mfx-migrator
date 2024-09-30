@@ -37,10 +37,14 @@ func TestMigrateOnChain(t *testing.T) {
 	}
 
 	// Set up the chain and keyring
-	appChain, user1 := SetupChain(t, ctx)
+	appChain, bankAcc, gasStationAcc := SetupChain(t, ctx)
 	chainConfig := appChain.Config()
-	err := SetupKeyring(tmpdir, []ibc.Wallet{user1})
+	err := SetupKeyring(tmpdir, []ibc.Wallet{bankAcc, gasStationAcc})
 	require.NoError(t, err)
+
+	grants, err := appChain.FeeGrantQueryAllowances(ctx, bankAcc.FormattedAddress())
+	require.NoError(t, err)
+	require.Len(t, grants, 1)
 
 	// Prepare the migrate command
 	command := &cobra.Command{Use: "migrate", PersistentPreRunE: cmd.RootCmdPersistentPreRunE, RunE: cmd.MigrateCmdRunE}
@@ -65,9 +69,10 @@ func TestMigrateOnChain(t *testing.T) {
 		"--address-prefix", chainConfig.Bech32Prefix,
 		"--node-address", appChain.GetHostRPCAddress(),
 		"--keyring-backend", "test",
-		"--bank-address", user1.KeyName(),
+		"--bank-address", bankAcc.KeyName(),
 		"--chain-home", tmpdir,
-		"--gas-price", "0",
+		"--gas-price", "0.0011",
+		"--fee-granter", gasStationAcc.FormattedAddress(),
 		"--binary", "manifestd",
 	}
 
@@ -132,7 +137,7 @@ func TestMigrateOnChain(t *testing.T) {
 			}
 
 			// Check the balance of the bank account pre-migration
-			balanceBO, err := appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+			balanceBO, err := appChain.BankQueryBalance(ctx, bankAcc.FormattedAddress(), Denom)
 			require.NoError(t, err)
 			require.Equal(t, balanceBO, tc.expected.Bank.Old)
 
@@ -155,7 +160,7 @@ func TestMigrateOnChain(t *testing.T) {
 				require.NoError(t, err)
 
 				// Check the balance of the bank account post-migration
-				balanceBN, err := appChain.BankQueryBalance(ctx, user1.FormattedAddress(), Denom)
+				balanceBN, err := appChain.BankQueryBalance(ctx, bankAcc.FormattedAddress(), Denom)
 				require.NoError(t, err)
 				require.Equal(t, balanceBN, tc.expected.Bank.New)
 

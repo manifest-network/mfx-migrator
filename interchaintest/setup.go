@@ -95,16 +95,22 @@ func setupInterchain(t *testing.T, ctx context.Context, manifestA *cosmos.Cosmos
 }
 
 // setupUser sets up a user for the test
-func setupUser(ctx context.Context, manifestA *cosmos.CosmosChain) (ibc.Wallet, error) {
+func setupUser(ctx context.Context, manifestA *cosmos.CosmosChain) (ibc.Wallet, ibc.Wallet, error) {
 	user1, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "default", userMnemonic, DefaultGenesisAmt, manifestA)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return user1, nil
+
+	user2, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user2", user2Mnemonic, DefaultGenesisAmt, manifestA)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user1, user2, nil
 }
 
 // SetupChain sets up an isolated chain for the test
-func SetupChain(t *testing.T, ctx context.Context) (*cosmos.CosmosChain, ibc.Wallet) {
+func SetupChain(t *testing.T, ctx context.Context) (*cosmos.CosmosChain, ibc.Wallet, ibc.Wallet) {
 	cfgA := setupConfig()
 	chains, err := setupChain(t, cfgA)
 	require.NoError(t, err)
@@ -112,10 +118,10 @@ func SetupChain(t *testing.T, ctx context.Context) (*cosmos.CosmosChain, ibc.Wal
 	manifestA := chains[0].(*cosmos.CosmosChain)
 	setupInterchain(t, ctx, manifestA)
 
-	user1, err := setupUser(ctx, manifestA)
+	user1, user2, err := setupUser(ctx, manifestA)
 	require.NoError(t, err)
 
-	return manifestA, user1
+	return manifestA, user1, user2
 }
 
 // SetupKeyring sets up the keyring for the test with the given users
@@ -132,7 +138,7 @@ func SetupKeyring(tmpdir string, users []ibc.Wallet) error {
 	coinType, err := strconv.ParseUint("118", 10, 32)
 
 	for _, user := range users {
-		_, err = kr.NewAccount(user.KeyName(), userMnemonic, "", hd.CreateHDPath(uint32(coinType), 0, 0).String(), hd.Secp256k1)
+		_, err = kr.NewAccount(user.KeyName(), user.Mnemonic(), "", hd.CreateHDPath(uint32(coinType), 0, 0).String(), hd.Secp256k1)
 		if err != nil {
 			return err
 		}
