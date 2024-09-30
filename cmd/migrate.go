@@ -114,6 +114,7 @@ func setupStringCmdFlags(command *cobra.Command) {
 		{"uuid", "migrate-uuid", "", "UUID of the work item to migrate", true},
 		{"binary", "binary", "manifestd", "Binary name of the blockchain to migrate to", false},
 		{"gas-denom", "gas-denom", "umfx", "Denomination of the gas price", false},
+		{"fee-granter", "fee-granter", "", "The address of the gas fee granter", false},
 	}
 
 	for _, arg := range args {
