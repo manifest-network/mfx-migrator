@@ -11,16 +11,20 @@ const (
 	maxDepositPeriod = "10s"
 	Denom            = "umfx"
 
-	accAddr  = "manifest1hj5fveer5cjtn4wd6wstzugjfdxzl0xp8ws9ct"
-	acc2Addr = "manifest1efd63aw40lxf3n4mhf7dzhjkr453axurm6rp3z"
+	accAddr        = "manifest1hj5fveer5cjtn4wd6wstzugjfdxzl0xp8ws9ct" // POA
+	gasStationAddr = "manifest1efd63aw40lxf3n4mhf7dzhjkr453axurm6rp3z" // Gas Station
+	bankAddr       = "manifest1atjlsfg8s2hpvszn5dr8z7d3usvs70tg3ssa84" // Bank
 
-	userMnemonic       = "tuna develop gap truly crew canoe enlist slim stove scorpion clerk absurd better surprise moon fiction bean poem car air proud prevent unknown glue"
-	cosmosGovModuleAcc = "manifest10d07y265gmmuvt4z0w9aw880jnsr700jmq3jzm"
-	chainType          = "cosmos"
-	chainName          = "manifest-ledger"
-	chainID            = "manifest-2"
-	chainRepository    = "ghcr.io/liftedinit/manifest-ledger"
-	chainVersion       = "v0.0.1-alpha.12"
+	// manifest1atjlsfg8s2hpvszn5dr8z7d3usvs70tg3ssa84
+	userMnemonic = "tuna develop gap truly crew canoe enlist slim stove scorpion clerk absurd better surprise moon fiction bean poem car air proud prevent unknown glue"
+
+	// manifest1efd63aw40lxf3n4mhf7dzhjkr453axurm6rp3z
+	user2Mnemonic   = "wealth flavor believe regret funny network recall kiss grape useless pepper cram hint member few certain unveil rather brick bargain curious require crowd raise"
+	chainType       = "cosmos"
+	chainName       = "manifest-ledger"
+	chainID         = "manifest-2"
+	chainRepository = "ghcr.io/liftedinit/manifest-ledger"
+	chainVersion    = "v0.0.1-alpha.16"
 )
 
 var (
@@ -37,6 +41,24 @@ var (
 		cosmos.NewGenesisKV("app_state.tokenfactory.params.denom_creation_gas_consume", "1"),
 		// Mint - this is the only param the manifest module depends on from mint
 		cosmos.NewGenesisKV("app_state.mint.params.blocks_per_year", "6311520"),
+		// FeeGrant
+		cosmos.NewGenesisKV("app_state.feegrant.allowances", []interface{}{
+			map[string]interface{}{
+				"granter": gasStationAddr,
+				"grantee": bankAddr,
+				"allowance": map[string]interface{}{
+					"@type": "/cosmos.feegrant.v1beta1.AllowedMsgAllowance",
+					"allowance": map[string]interface{}{
+						"@type":       "/cosmos.feegrant.v1beta1.BasicAllowance",
+						"spend_limit": []interface{}{},
+						"expiration":  nil,
+					},
+					"allowed_messages": []string{
+						"/cosmos.bank.v1beta1.MsgSend",
+					},
+				},
+			},
+		}),
 	}
 
 	LocalChainConfig = ibc.ChainConfig{
@@ -53,7 +75,7 @@ var (
 		Bin:            "manifestd",
 		Bech32Prefix:   "manifest",
 		Denom:          Denom,
-		GasPrices:      "0" + Denom,
+		GasPrices:      "0.0011" + Denom,
 		GasAdjustment:  1.3,
 		TrustingPeriod: "508h",
 		NoHostMount:    false,

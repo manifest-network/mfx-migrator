@@ -84,6 +84,7 @@ type MigrateConfig struct {
 	GasPrice         float64                    // Minimum gas price to use for transactions
 	GasAdjustment    float64                    // Gas adjustment to use for transactions
 	GasDenom         string                     // Gas denomination to use for transactions
+	FeeGranter       string                     // The address of the gas fee granter
 }
 
 func (c MigrateConfig) Validate() error {
@@ -133,6 +134,10 @@ func (c MigrateConfig) Validate() error {
 
 	if c.GasDenom == "" {
 		return fmt.Errorf("gas denom is required")
+	}
+
+	if c.FeeGranter == "" {
+		return fmt.Errorf("fee granter is required")
 	}
 
 	if _, err := exec.LookPath(c.Binary); err != nil {

@@ -76,6 +76,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	from := []string{"--from", migrateConfig.BankAddress}
 	gasAdjustment := []string{"--gas-adjustment", fmt.Sprintf("%f", migrateConfig.GasAdjustment)}
 	gasPrice := []string{"--gas-prices", fmt.Sprintf("%f%s", migrateConfig.GasPrice, migrateConfig.GasDenom)}
+	feeGranter := []string{"--fee-granter", migrateConfig.FeeGranter}
 	output := []string{"--output", OutputFormat}
 
 	// Send the tokens to the manifest address
@@ -88,6 +89,7 @@ func Migrate(item *store.WorkItem, migrateConfig config.MigrateConfig, denom str
 	txSend = append(txSend, gas...)
 	txSend = append(txSend, gasAdjustment...)
 	txSend = append(txSend, gasPrice...)
+	txSend = append(txSend, feeGranter...)
 	txSend = append(txSend, output...)
 	txSend = append(txSend, yes...)
 	o, err := executeCommand(migrateConfig.Binary, txSend...)
