@@ -1,7 +1,6 @@
 module github.com/liftedinit/mfx-migrator/interchaintest
 
-go 1.22.5
-toolchain go1.22.9
+go 1.22.7
 
 replace (
 	cosmossdk.io/core => cosmossdk.io/core v0.11.0 // proper SDK v50 version
