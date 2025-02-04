@@ -24,7 +24,7 @@ const (
 	chainName       = "manifest-ledger"
 	chainID         = "manifest-2"
 	chainRepository = "ghcr.io/liftedinit/manifest-ledger"
-	chainVersion    = "v0.0.1-rc.3"
+	chainVersion    = "v0.0.1-rc.4"
 )
 
 var (
