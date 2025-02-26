@@ -22,9 +22,9 @@ func TestMigrateCmd(t *testing.T) {
 	testutils.SetupWorkItem(t)
 
 	var slice []string
-	urlArg := append(slice, []string{"--url", testutils.RootUrl}...)
-	uuidArg := append(urlArg, []string{"--uuid", testutils.DummyUUIDStr}...)
-	chainHomeArg := append(uuidArg, []string{"--chain-home", "/tmp"}...)
+	uuidArg := append(slice, []string{"--uuid", testutils.DummyUUIDStr}...)
+	urlArg := append(uuidArg, []string{"--url", testutils.RootUrl}...)
+	chainHomeArg := append(urlArg, []string{"--chain-home", "/tmp"}...)
 	feeGrantArg := append(chainHomeArg, []string{"--fee-granter", "feegranter"}...)
 	usernameArg := append(feeGrantArg, []string{"--username", "user"}...)
 	passwordArg := append(usernameArg, []string{"--password", "pass"}...)
@@ -43,9 +43,9 @@ func TestMigrateCmd(t *testing.T) {
 		err  string
 		out  string
 	}{
-		{name: "no argument", args: []string{}, err: "URL cannot be empty"},
-		{name: "uuid missing", args: urlArg, err: "required flag(s) \"uuid\" not set"},
-		{name: "chain home missing", args: uuidArg, err: "chain home is required"},
+		{name: "no argument", args: []string{}, err: "required flag(s) \"uuid\" not set"},
+		{name: "url missing", args: uuidArg, err: ""},
+		{name: "chain home missing", args: urlArg, err: "chain home is required"},
 		{name: "feegrant missing", args: chainHomeArg, err: "fee granter is required"},
 		{name: "username missing", args: feeGrantArg, err: "username is required"},
 		{name: "password missing", args: usernameArg, err: "password is required"},
