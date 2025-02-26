@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
 	"strings"
 
@@ -23,9 +22,6 @@ func RootCmdPersistentPreRunE(cmd *cobra.Command, args []string) error {
 	logLevelArg := viper.GetString("logLevel")
 	urlString := viper.GetString("url")
 	if err := setLogLevel(logLevelArg); err != nil {
-		return err
-	}
-	if err := validateURL(urlString); err != nil {
 		return err
 	}
 
@@ -111,18 +107,5 @@ func setLogLevel(logLevel string) error {
 	}))
 	slog.SetDefault(logger)
 
-	return nil
-}
-
-// validateURL validates a URL is not empty and is a valid URL
-func validateURL(urlStr string) error {
-	if urlStr == "" {
-		return fmt.Errorf("URL cannot be empty")
-	}
-
-	_, err := url.ParseRequestURI(urlStr)
-	if err != nil {
-		return fmt.Errorf("invalid URL: %v", err)
-	}
 	return nil
 }
