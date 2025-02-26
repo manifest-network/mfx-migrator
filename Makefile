@@ -6,9 +6,12 @@ help: ## Display this help screen
 
 #### BUILD ####
 
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_FLAGS := -ldflags "-X github.com/liftedinit/mfx-migrator/cmd.Version=$(VERSION)"
+
 build: ## Build the project
-	@echo "--> Building project"
-	@go build -o mfx-migrator ./
+	@echo "--> Building project (version: $(VERSION))"
+	@go build $(BUILD_FLAGS) -o mfx-migrator ./
 	@echo "--> Building project complete"
 
 .PHONY: build
