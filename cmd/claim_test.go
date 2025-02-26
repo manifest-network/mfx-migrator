@@ -37,7 +37,7 @@ func TestClaimCmd(t *testing.T) {
 		expected  string
 		endpoints []testutils.HttpResponder
 	}{
-		{name: "no argument", args: []string{}, err: "URL cannot be empty"},
+		{name: "no argument", args: []string{}, err: "url is required"},
 		{name: "username missing", args: urlArg, err: "username is required"},
 		{name: "password missing", args: usernameArg, err: "password is required"},
 		{name: "claim from queue (default neighborhood)", args: passwordArg, endpoints: []testutils.HttpResponder{
