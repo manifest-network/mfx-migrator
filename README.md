@@ -63,13 +63,18 @@ where `[UUID]` is the UUID of the work item.
 Flags:
 - `--address-prefix string` - Address prefix of the MANIFEST chain. Default is `manifest`.
 - `--bank-address string` - The address of the bank account to use for the token transaction on the MANIFEST chain. Default is `bank`.
+- `--binary` - The name of the chain binary used to perform the migration. The binary must be in `$PATH`. Default is `manifestd`
 - `--chain-home` - The root directory of the chain configuration. Default is an empty string.
 - `--chain-id string` - The chain ID of the MANIFEST chain. Default is `manifest-1`.
+- `--fee-granter` - The address of the fee granter account to use for the token transaction on the MANIFEST chain. Default is an empty string.
+- `--gas-adjustment` - Gas adjustment to use for transactions.
+- `--gas-denom` - Denomination of the gas fee.
+- `--gas-price` - Minimum gas price to use for transactions
 - `--keyring-backend string` - The keyring backend to use. Default is `test`.
 - `--node-address` - The RPC endpoint of the MANIFEST chain. Default is `http://localhost:26657`.
 - `--uuid string` - The UUID of the work item to migrate. Default is an empty string.
-- `--fee-granter` - The address of the fee granter account to use for the token transaction on the MANIFEST chain. Default is an empty string.
-- `--binary` - The name of the chain binary used to perform the migration. The binary must be in `$PATH`. Default is `manifestd`
+- `--wait-for-block-timeout` - Number of seconds spent waiting for the block to be committed.
+- `--wait-for-tx-timeout` - Number of seconds spent waiting for the transaction to be included in a block.
 
 This command triggers a token transaction on the MANIFEST chain and updates the work item status in the remote database.
 
