@@ -19,7 +19,7 @@ The complete migration flow is as follows:
 
 # Requirements
 
-- Go programming language, version 1.22.1 or higher
+- Go programming language, version 1.23 or higher
 - GNU Make
 - Bash
 - (Optional) Docker (for running the E2E tests)
