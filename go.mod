@@ -1,6 +1,6 @@
 module github.com/liftedinit/mfx-migrator
 
-go 1.22.12
+go 1.23.8
 
 require (
 	github.com/go-resty/resty/v2 v2.11.0
