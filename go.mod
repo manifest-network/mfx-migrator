@@ -1,6 +1,7 @@
 module github.com/liftedinit/mfx-migrator
 
 go 1.23.8
+
 toolchain go1.24.1
 
 require (
