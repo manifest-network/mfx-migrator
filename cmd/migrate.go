@@ -62,7 +62,7 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := verifyManifestAddressIsAllowed(item, r); err != nil {
+	if err := verifyManyAddressIsAllowed(item, r); err != nil {
 		// An unauthorized address scheduled a migration
 		// Mark the migration as failed
 		errStr := err.Error()
@@ -93,10 +93,11 @@ func init() {
 	rootCmd.AddCommand(migrateCmd)
 }
 
-// verifyManifestAddressIsAllowed verifies that the manifest address is in the whitelist and allowed to migrate tokens.
-func verifyManifestAddressIsAllowed(item *store.WorkItem, client *resty.Client) error {
-	if item.ManifestAddress == "" {
-		return fmt.Errorf("manifest address is empty")
+// verifyManyAddressIsAllowed verifies that the manifest address is in the whitelist and allowed to migrate tokens.
+func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) error {
+	txArgs, err := many.GetTxInfo(client, item.ManyHash)
+	if err != nil {
+		return errors.WithMessage(err, "error getting MANY tx info")
 	}
 
 	resp, err := client.R().
@@ -120,8 +121,8 @@ func verifyManifestAddressIsAllowed(item *store.WorkItem, client *resty.Client) 
 		return fmt.Errorf("error unmarshalling migration whitelisted addresses")
 	}
 
-	if !slices.Contains(*whitelist, item.ManifestAddress) {
-		return fmt.Errorf("manifest address %s not in whitelist", item.ManifestAddress)
+	if !slices.Contains(*whitelist, txArgs.From) {
+		return fmt.Errorf("many address %s not in whitelist", item.ManifestAddress)
 	}
 
 	return nil
