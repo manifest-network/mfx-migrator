@@ -100,7 +100,7 @@ func verifyManifestAddressIsAllowed(item *store.WorkItem, client *resty.Client) 
 	}
 
 	resp, err := client.R().
-		SetResult([]string{}).
+		SetResult(&[]string{}).
 		Get("migrations-whitelist")
 	if err != nil {
 		return errors.WithMessage(err, "error getting migration whitelisted addresses")
