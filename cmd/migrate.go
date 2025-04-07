@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math/big"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -56,9 +57,20 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 	if err := verifyItemStatus(item); err != nil {
 		return err
 	}
-
 	r := CreateRestClient(cmd.Context(), c.Url, c.Neighborhood)
 	if err := AuthenticateRestClient(r, authConfig.Username, authConfig.Password); err != nil {
+		return err
+	}
+
+	if err := verifyManifestAddressIsAllowed(item, r); err != nil {
+		// An unauthorized address scheduled a migration
+		// Mark the migration as failed
+		errStr := err.Error()
+		sErr := setAsFailed(r, *item, &errStr)
+		if sErr != nil {
+			return errors.WithMessage(err, sErr.Error())
+		}
+
 		return err
 	}
 
@@ -79,6 +91,40 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 func init() {
 	SetupMigrateCmdFlags(migrateCmd)
 	rootCmd.AddCommand(migrateCmd)
+}
+
+// verifyManifestAddressIsAllowed verifies that the manifest address is in the whitelist and allowed to migrate tokens.
+func verifyManifestAddressIsAllowed(item *store.WorkItem, client *resty.Client) error {
+	if item.ManifestAddress == "" {
+		return fmt.Errorf("manifest address is empty")
+	}
+
+	resp, err := client.R().
+		SetResult([]string{}).
+		Get("migrations-whitelist")
+	if err != nil {
+		return errors.WithMessage(err, "error getting migration whitelisted addresses")
+	}
+
+	if resp == nil {
+		return fmt.Errorf("no response returned when getting migration whitelisted addresses")
+	}
+
+	statusCode := resp.StatusCode()
+	if statusCode != 200 {
+		return fmt.Errorf("response status code: %d", statusCode)
+	}
+
+	whitelist := resp.Result().(*[]string)
+	if whitelist == nil {
+		return fmt.Errorf("error unmarshalling migration whitelisted addresses")
+	}
+
+	if !slices.Contains(*whitelist, item.ManifestAddress) {
+		return fmt.Errorf("manifest address %s not in whitelist", item.ManifestAddress)
+	}
+
+	return nil
 }
 
 // verifyItemStatus verifies the status of the work item is valid for migration.

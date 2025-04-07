@@ -32,6 +32,8 @@ type HttpResponder struct {
 }
 
 var AuthResponder, _ = httpmock.NewJsonResponder(http.StatusOK, map[string]string{"access_token": "ya29.Gl0UBZ3"})
+var WhiteListResponder, _ = httpmock.NewJsonResponder(http.StatusOK, []string{ManifestAddress})
+var InvalidWhiteListResponder, _ = httpmock.NewJsonResponder(http.StatusOK, []string{"manifest1hj5fveer5cjtn4wd6wstzugjfdxzl0xp8ws9ct"})
 
 func MustNewLedgerSendTransactionResponseResponder(amount string) httpmock.Responder {
 	args := many.Arguments{
