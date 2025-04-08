@@ -110,11 +110,13 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 		return fmt.Errorf("no response returned when getting migration whitelisted addresses")
 	}
 
+	slog.Info("Response", "response", resp)
+	slog.Info("Response Body", "response", resp.Body())
+
 	statusCode := resp.StatusCode()
 	if statusCode != 200 {
 		return fmt.Errorf("response status code: %d", statusCode)
 	}
-	slog.Info("Result", "result", resp.Result())
 	//slog.Info("isAllowed", "isAllowed", isAllowed)
 	//if *isAllowed == "false" {
 	//	return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
