@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"math/big"
 	"os"
-	"slices"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -101,8 +100,9 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 	}
 
 	resp, err := client.R().
-		SetResult(&[]string{}).
-		Get("migrations-whitelist")
+		SetResult(bool(false)).
+		SetPathParam("address", txArgs.From).
+		Get("migrations-whitelist/{address}")
 	if err != nil {
 		return errors.WithMessage(err, "error getting migration whitelisted addresses")
 	}
@@ -116,13 +116,9 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 		return fmt.Errorf("response status code: %d", statusCode)
 	}
 
-	whitelist := resp.Result().(*[]string)
-	if whitelist == nil {
-		return fmt.Errorf("error unmarshalling migration whitelisted addresses")
-	}
-
-	if !slices.Contains(*whitelist, txArgs.From) {
-		return fmt.Errorf("many address %s not in whitelist", item.ManifestAddress)
+	isAllowed := *resp.Result().(*bool)
+	if !isAllowed {
+		return fmt.Errorf("address %s not allowed to migrate", item.ManifestAddress)
 	}
 
 	return nil

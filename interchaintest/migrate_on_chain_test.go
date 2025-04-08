@@ -88,7 +88,7 @@ func TestMigrateOnChain(t *testing.T) {
 	}{
 		{name: "1:1000 tokens", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
+			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("1000")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
@@ -98,7 +98,7 @@ func TestMigrateOnChain(t *testing.T) {
 		}},
 		{name: "insufficient funds", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
+			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder(defaultGenesisAmtPlusThousand.String())},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
@@ -108,7 +108,7 @@ func TestMigrateOnChain(t *testing.T) {
 		}, err: "insufficient funds"},
 		{name: "invalid coins", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
+			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("0")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
@@ -118,7 +118,7 @@ func TestMigrateOnChain(t *testing.T) {
 		}, err: "invalid coins"},
 		{name: "all tokens from bank", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
+			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewMultisigTransactionResponseResponder(defaultGenesisAmtMinThousand.String())},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
@@ -128,14 +128,14 @@ func TestMigrateOnChain(t *testing.T) {
 		}},
 		{name: "non-whitelisted address", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
-			{Method: "GET", Url: testutils.WhiteListUrl, Responder: testutils.InvalidWhiteListResponder},
+			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.InvalidWhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
 			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("1000")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
 			Bank: Amounts{Old: math.ZeroInt()},
 			User: Amounts{Old: DefaultGenesisAmt},
-		}, err: "not in whitelist",
+		}, err: "not allowed to migrate",
 		},
 	}
 
