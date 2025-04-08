@@ -99,7 +99,7 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 		return errors.WithMessage(err, "error getting MANY tx info")
 	}
 
-	var isAllowed = new(bool)
+	var isAllowed = new(string)
 	resp, err := client.R().
 		SetResult(isAllowed).
 		SetPathParam("address", txArgs.From).
@@ -118,7 +118,7 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 	}
 	slog.Info("Result", "result", resp.Result())
 	slog.Info("isAllowed", "isAllowed", isAllowed)
-	if !*isAllowed {
+	if *isAllowed == "false" {
 		return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
 	}
 
