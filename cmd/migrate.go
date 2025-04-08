@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -110,17 +111,20 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 		return fmt.Errorf("no response returned when getting migration whitelisted addresses")
 	}
 
-	slog.Info("Response", "response", resp)
-	slog.Info("Response Body", "response", resp.Body())
-
 	statusCode := resp.StatusCode()
 	if statusCode != 200 {
 		return fmt.Errorf("response status code: %d", statusCode)
 	}
-	//slog.Info("isAllowed", "isAllowed", isAllowed)
-	//if *isAllowed == "false" {
-	//	return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
-	//}
+
+	var isAllowed bool
+	if err := json.Unmarshal(resp.Body(), &isAllowed); err != nil {
+		return errors.WithMessage(err, "error unmarshalling response")
+	}
+	slog.Info("isAllowed", "isAllowed", isAllowed)
+
+	if !isAllowed {
+		return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
+	}
 
 	return nil
 }
