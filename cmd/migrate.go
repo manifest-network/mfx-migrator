@@ -120,7 +120,6 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 	if err := json.Unmarshal(resp.Body(), &isAllowed); err != nil {
 		return errors.WithMessage(err, "error unmarshalling response")
 	}
-	slog.Info("isAllowed", "isAllowed", isAllowed)
 
 	if !isAllowed {
 		return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
