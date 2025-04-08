@@ -116,9 +116,11 @@ func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) erro
 		return fmt.Errorf("response status code: %d", statusCode)
 	}
 
+	slog.Info("Result", "result", resp.Result())
+
 	isAllowed := *resp.Result().(*bool)
 	if !isAllowed {
-		return fmt.Errorf("address %s not allowed to migrate", item.ManifestAddress)
+		return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
 	}
 
 	return nil
