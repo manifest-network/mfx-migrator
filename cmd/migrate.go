@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -56,9 +57,20 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 	if err := verifyItemStatus(item); err != nil {
 		return err
 	}
-
 	r := CreateRestClient(cmd.Context(), c.Url, c.Neighborhood)
 	if err := AuthenticateRestClient(r, authConfig.Username, authConfig.Password); err != nil {
+		return err
+	}
+
+	if err := verifyManyAddressIsAllowed(item, r); err != nil {
+		// An unauthorized address scheduled a migration
+		// Mark the migration as failed
+		errStr := err.Error()
+		sErr := setAsFailed(r, *item, &errStr)
+		if sErr != nil {
+			return errors.WithMessage(err, sErr.Error())
+		}
+
 		return err
 	}
 
@@ -79,6 +91,41 @@ func MigrateCmdRunE(cmd *cobra.Command, args []string) error {
 func init() {
 	SetupMigrateCmdFlags(migrateCmd)
 	rootCmd.AddCommand(migrateCmd)
+}
+
+// verifyManyAddressIsAllowed verifies that the manifest address is in the whitelist and allowed to migrate tokens.
+func verifyManyAddressIsAllowed(item *store.WorkItem, client *resty.Client) error {
+	txArgs, err := many.GetTxInfo(client, item.ManyHash)
+	if err != nil {
+		return errors.WithMessage(err, "error getting MANY tx info")
+	}
+
+	resp, err := client.R().
+		SetPathParam("address", txArgs.From).
+		Get("migrations-whitelist/{address}")
+	if err != nil {
+		return errors.WithMessage(err, "error getting migration whitelisted addresses")
+	}
+
+	if resp == nil {
+		return fmt.Errorf("no response returned when getting migration whitelisted addresses")
+	}
+
+	statusCode := resp.StatusCode()
+	if statusCode != 200 {
+		return fmt.Errorf("response status code: %d", statusCode)
+	}
+
+	var isAllowed bool
+	if err := json.Unmarshal(resp.Body(), &isAllowed); err != nil {
+		return errors.WithMessage(err, "error unmarshalling response")
+	}
+
+	if !isAllowed {
+		return fmt.Errorf("address %s not allowed to migrate", txArgs.From)
+	}
+
+	return nil
 }
 
 // verifyItemStatus verifies the status of the work item is valid for migration.

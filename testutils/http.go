@@ -20,4 +20,5 @@ var (
 	ClaimUrl     = RootUrl + fmt.Sprintf("neighborhoods/%s/migrations/claim/", Neighborhood)
 	ClaimUuidUrl = ClaimUrl + Uuidv4Regex
 	LoginUrl     = RootUrl + "auth/login"
+	WhiteListUrl = RootUrl + "migrations-whitelist/" + "[a-zA-Z0-9]{1,}"
 )
