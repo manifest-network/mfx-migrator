@@ -286,7 +286,6 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 	// The MANY chain supports 9 decimal places
 	// The MANIFEST chain supports 6 decimal places
 	// Perform a 1:100 split
-	// If amount is 100000000, we want to send 100000000 * 100 = 10000000000
 	// 1 MFX on the MANY chain = 100 MFX on the MANIFEST chain
 	newAmount := new(big.Int)
 	newAmount.Quo(amount, big.NewInt(10))
