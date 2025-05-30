@@ -96,10 +96,10 @@ func CheckTxInfo(txArgs *Arguments, itemUUID uuid.UUID, manifestAddr string) err
 
 	// The MANY chain supports 9 decimal places
 	// The MANIFEST chain support 6 decimal places
-	// We're doing a 1:100 conversion
+	// We're doing a 1:10 conversion
 	// Check the amount is not dust that would be lost in the conversion
-	if bigAmount.Cmp(big.NewInt(10)) < 0 {
-		return fmt.Errorf("amount must be greater than 0.000000009: %s", txArgs.Amount)
+	if bigAmount.Cmp(big.NewInt(100)) < 0 {
+		return fmt.Errorf("amount must be greater than 0.000000099: %s", txArgs.Amount)
 	}
 
 	return nil

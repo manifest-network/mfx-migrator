@@ -77,7 +77,7 @@ func TestMigrateOnChain(t *testing.T) {
 	}
 
 	amtToTruncate := math.NewInt(1123456789)
-	amtTruncated := math.NewInt(112345678)
+	amtTruncated := math.NewInt(11234567)
 	defaultGenesisAmtMinOne := DefaultGenesisAmt.Sub(math.OneInt()) // Genesis amount - 1
 
 	tt := []struct {
@@ -91,7 +91,7 @@ func TestMigrateOnChain(t *testing.T) {
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("10")},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("100")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
 			Bank: Amounts{Old: DefaultGenesisAmt, New: defaultGenesisAmtMinOne},
@@ -107,17 +107,16 @@ func TestMigrateOnChain(t *testing.T) {
 			Bank: Amounts{Old: defaultGenesisAmtMinOne, New: defaultGenesisAmtMinOne.Sub(amtTruncated)},
 			User: Amounts{Old: math.OneInt(), New: amtTruncated.Add(math.OneInt())},
 		}},
-		{name: "minimum amount is 10", args: slice, endpoints: []testutils.HttpResponder{
+		{name: "minimum amount is 100", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("9")},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewLedgerSendTransactionResponseResponder("99")},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
 			Bank: Amounts{Old: defaultGenesisAmtMinOne.Sub(amtTruncated)},
 			User: Amounts{Old: amtTruncated.Add(math.OneInt())},
 		}, err: "amount must be greater"},
-
 		{name: "insufficient funds", args: slice, endpoints: []testutils.HttpResponder{
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
@@ -132,7 +131,7 @@ func TestMigrateOnChain(t *testing.T) {
 			{Method: "POST", Url: testutils.LoginUrl, Responder: testutils.AuthResponder},
 			{Method: "GET", Url: "=~^" + testutils.WhiteListUrl, Responder: testutils.WhiteListResponder},
 			{Method: "GET", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MustMigrationGetResponder(store.CLAIMED)},
-			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewMultisigTransactionResponseResponder(defaultGenesisAmtMinOne.Sub(amtTruncated).Mul(math.NewInt(10)).String())},
+			{Method: "GET", Url: "=~^" + testutils.DefaultTransactionUrl, Responder: testutils.MustNewMultisigTransactionResponseResponder(defaultGenesisAmtMinOne.Sub(amtTruncated).Mul(math.NewInt(100)).String())},
 			{Method: "PUT", Url: "=~^" + testutils.DefaultMigrationUrl, Responder: testutils.MigrationUpdateResponder},
 		}, expected: Expected{
 			Bank: Amounts{Old: defaultGenesisAmtMinOne.Sub(amtTruncated), New: math.ZeroInt()},
