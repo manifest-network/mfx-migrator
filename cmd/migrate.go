@@ -285,10 +285,10 @@ func migrate(r *resty.Client, item *store.WorkItem, config config.MigrateConfig)
 
 	// The MANY chain supports 9 decimal places
 	// The MANIFEST chain supports 6 decimal places
-	// Perform a 1:100 split
-	// 1 MFX on the MANY chain = 100 MFX on the MANIFEST chain
+	// Perform a 1:10 split
+	// 1 MFX on the MANY chain = 10 MFX on the MANIFEST chain
 	newAmount := new(big.Int)
-	newAmount.Quo(amount, big.NewInt(10))
+	newAmount.Quo(amount, big.NewInt(100))
 
 	slog.Info("NEW AMOUNT", "newAmount", newAmount.String())
 
