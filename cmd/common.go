@@ -34,10 +34,10 @@ func CreateRestClient(ctx context.Context, url string, neighborhood uint64) *res
 	return client.
 		SetBaseURL(url).
 		SetPathParam("neighborhood", strconv.FormatUint(neighborhood, 10)).
-		SetRetryCount(3).                      // Retry the request process 3 times. Retry uses an exponential backoff algorithm.
-		SetRetryWaitTime(5 * time.Second).     // With a 5 seconds wait time between retries
-		SetRetryMaxWaitTime(60 * time.Second). // And a maximum wait time of 60 seconds for the whole process
-		SetTimeout(10 * time.Second)           // Set a timeout of 10 seconds for the request
+		SetRetryCount(10). // Retry the request process 3 times. Retry uses an exponential backoff algorithm.
+		SetRetryWaitTime(5 * time.Second). // With a 5 seconds wait time between retries
+		SetRetryMaxWaitTime(10 * time.Minute). // And a maximum wait time of 60 seconds for the whole process
+		SetTimeout(20 * time.Second) // Set a timeout of 10 seconds for the request
 }
 
 // AuthenticateRestClient logs in to the remote database
