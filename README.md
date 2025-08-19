@@ -1,4 +1,10 @@
-[![build](https://img.shields.io/circleci/build/github/manifest-network/mfx-migrator/main)](https://app.circleci.com/pipelines/github/manifest-network/mfx-migrator)
+<h1 align="center">mfx-migrator</h1>
+
+<p align="center">
+  <a href="#overview"><img src="https://raw.githubusercontent.com/cosmos/chain-registry/00df6ff89abd382f9efe3d37306c353e2bd8d55c/manifest/images/manifest.png" alt="Lifted Initiative" width="100"/></a>
+</p>
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/manifest-network/mfx-migrator/ci.yml)
 [![coverage](https://img.shields.io/codecov/c/github/manifest-network/mfx-migrator)](https://app.codecov.io/gh/manifest-network/mfx-migrator)
 [![Go Report Card](https://goreportcard.com/badge/github.com/manifest-network/mfx-migrator)](https://goreportcard.com/report/github.com/manifest-network/mfx-migrator)
 
