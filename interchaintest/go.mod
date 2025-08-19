@@ -1,6 +1,6 @@
 module github.com/manifest-network/mfx-migrator/interchaintest
 
-go 1.23.10
+go 1.24.6
 
 replace (
 	cosmossdk.io/core => cosmossdk.io/core v0.11.0 // proper SDK v50 version
