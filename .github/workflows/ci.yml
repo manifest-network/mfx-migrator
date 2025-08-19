@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  GO_VERSION: '1.24.6'
+  GORELEASER_VERSION: 'v1.26.2'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build / Test / Coverage / Snapshot
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      # Pull manifest-ledger image and extract /usr/bin/manifestd
+      # (If the image is private, add a GHCR login step before this.)
+      - name: Pull manifest-ledger Docker image
+        run: docker pull ghcr.io/manifest-network/manifest-ledger:1.0.8
+
+      - name: Install manifestd from manifest-ledger image
+        run: |
+          id=$(docker create ghcr.io/manifest-network/manifest-ledger:1.0.8)
+          docker cp "$id":/usr/bin/manifestd /tmp/manifestd
+          sudo mv /tmp/manifestd /usr/local/bin/
+          docker rm -v "$id"
+
+      - name: Run tests
+        run: make test
+
+      - name: Generate coverage
+        run: make coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage-filtered.out
+          token: ${{ secrets.CODECOV_TOKEN }} # only needed for private repos
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: GoReleaser snapshot build
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: ${{ env.GORELEASER_VERSION }}
+          args: release --snapshot --clean
+
+      - name: Collect snapshot artifacts
+        run: |
+          mkdir -p /tmp/artifacts
+          shopt -s nullglob
+          mv dist/mfx-migrator_*.tar.gz dist/mfx-migrator_*.txt /tmp/artifacts || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-artifacts
+          path: /tmp/artifacts
+          if-no-files-found: ignore
+
+  security:
+    name: Security (vet + govulncheck)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: go vet
+        run: make vet
+      - name: govulncheck
+        run: make govulncheck
