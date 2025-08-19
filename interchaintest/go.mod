@@ -1,4 +1,4 @@
-module github.com/liftedinit/mfx-migrator/interchaintest
+module github.com/manifest-network/mfx-migrator/interchaintest
 
 go 1.23.10
 
@@ -8,15 +8,15 @@ replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/liftedinit/mfx-migrator => ../
+	github.com/manifest-network/mfx-migrator => ../
 )
 
 require (
 	cosmossdk.io/math v1.4.0
-	github.com/cosmos/cosmos-sdk v0.50.12
+	github.com/cosmos/cosmos-sdk v0.50.14
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/jarcoal/httpmock v1.3.1
-	github.com/liftedinit/mfx-migrator v0.0.0-00000000000000-000000000000
+	github.com/manifest-network/mfx-migrator v0.0.0-00000000000000-000000000000
 	github.com/spf13/cobra v1.8.1
 	github.com/strangelove-ventures/interchaintest/v8 v8.2.0
 	github.com/strangelove-ventures/poa v0.50.6

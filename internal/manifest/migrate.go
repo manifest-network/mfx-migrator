@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/liftedinit/mfx-migrator/internal/config"
+	"github.com/manifest-network/mfx-migrator/internal/config"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/store"
 )
 
 const (

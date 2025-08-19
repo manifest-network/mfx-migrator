@@ -7,7 +7,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
+	"github.com/manifest-network/mfx-migrator/internal/utils"
 )
 
 // UpdateWorkItemAndSaveState updates a work item in the remote database and saves the state locally.

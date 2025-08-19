@@ -1,6 +1,6 @@
-[![build](https://img.shields.io/circleci/build/github/liftedinit/mfx-migrator/main)](https://app.circleci.com/pipelines/github/liftedinit/mfx-migrator)
-[![coverage](https://img.shields.io/codecov/c/github/liftedinit/mfx-migrator)](https://app.codecov.io/gh/liftedinit/mfx-migrator)
-[![Go Report Card](https://goreportcard.com/badge/github.com/liftedinit/mfx-migrator)](https://goreportcard.com/report/github.com/liftedinit/mfx-migrator)
+[![build](https://img.shields.io/circleci/build/github/manifest-network/mfx-migrator/main)](https://app.circleci.com/pipelines/github/manifest-network/mfx-migrator)
+[![coverage](https://img.shields.io/codecov/c/github/manifest-network/mfx-migrator)](https://app.codecov.io/gh/manifest-network/mfx-migrator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/manifest-network/mfx-migrator)](https://goreportcard.com/report/github.com/manifest-network/mfx-migrator)
 
 
 **mfx-migrator** is a centralized daemon responsible for migrating data from the old MANY chain to the new MANIFEST chain. 

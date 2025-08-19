@@ -26,11 +26,11 @@ jobs:
             key: *go_mod_cache_key
       - run:
           name: Pull manifest-ledger Docker image
-          command: docker pull ghcr.io/liftedinit/manifest-ledger:v1.0.3
+          command: docker pull ghcr.io/manifest-network/manifest-ledger:1.0.8
       - run:
           name: Install manifestd from manifest-ledger Docker image
           command: |
-            id=$(docker create ghcr.io/liftedinit/manifest-ledger:v1.0.3)
+            id=$(docker create ghcr.io/manifest-network/manifest-ledger:1.0.8)
             docker cp $id:/usr/bin/manifestd /tmp/manifestd
             sudo mv /tmp/manifestd /usr/local/bin/
             docker rm -v $id

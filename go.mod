@@ -1,4 +1,4 @@
-module github.com/liftedinit/mfx-migrator
+module github.com/manifest-network/mfx-migrator
 
 go 1.23.10
 

@@ -10,9 +10,9 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/testutils"
+	"github.com/manifest-network/mfx-migrator/testutils"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/store"
 )
 
 type testCase struct {

@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
+	"github.com/manifest-network/mfx-migrator/internal/utils"
 )
 
 var rootCmd = &cobra.Command{

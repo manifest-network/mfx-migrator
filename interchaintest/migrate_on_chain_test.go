@@ -13,10 +13,10 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/store"
 
-	"github.com/liftedinit/mfx-migrator/cmd"
-	"github.com/liftedinit/mfx-migrator/testutils"
+	"github.com/manifest-network/mfx-migrator/cmd"
+	"github.com/manifest-network/mfx-migrator/testutils"
 )
 
 type Amounts struct {
