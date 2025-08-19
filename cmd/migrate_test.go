@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/cmd"
-	"github.com/liftedinit/mfx-migrator/testutils"
+	"github.com/manifest-network/mfx-migrator/cmd"
+	"github.com/manifest-network/mfx-migrator/testutils"
 )
 
 func TestMigrateCmd(t *testing.T) {

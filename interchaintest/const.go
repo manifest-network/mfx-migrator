@@ -23,8 +23,8 @@ const (
 	chainType       = "cosmos"
 	chainName       = "manifest-ledger"
 	chainID         = "manifest-2"
-	chainRepository = "ghcr.io/liftedinit/manifest-ledger"
-	chainVersion    = "v1.0.3"
+	chainRepository = "ghcr.io/manifest-network/manifest-ledger"
+	chainVersion    = "1.0.8"
 )
 
 var (

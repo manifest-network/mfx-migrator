@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/store"
 )
 
 // verifyCmd represents the verify command

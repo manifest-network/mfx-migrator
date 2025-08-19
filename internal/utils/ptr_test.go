@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
+	"github.com/manifest-network/mfx-migrator/internal/utils"
 )
 
 func TestPtr(t *testing.T) {

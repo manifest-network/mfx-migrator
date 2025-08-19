@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/store"
 )
 
 func TestTypes_WorkItemStatus(t *testing.T) {

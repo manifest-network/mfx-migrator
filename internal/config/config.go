@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/liftedinit/mfx-migrator/internal/utils"
+	"github.com/manifest-network/mfx-migrator/internal/utils"
 )
 
 // Config represents the configuration for the command

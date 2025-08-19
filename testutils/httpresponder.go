@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 
-	"github.com/liftedinit/mfx-migrator/internal/many"
-	"github.com/liftedinit/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/many"
+	"github.com/manifest-network/mfx-migrator/internal/store"
 )
 
 // TODO: Randomize parameters. Fuzzy testing.

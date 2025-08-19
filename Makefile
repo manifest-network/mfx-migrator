@@ -7,7 +7,7 @@ help: ## Display this help screen
 #### BUILD ####
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_FLAGS := -ldflags "-X github.com/liftedinit/mfx-migrator/cmd.Version=$(VERSION)"
+BUILD_FLAGS := -ldflags "-X github.com/manifest-network/mfx-migrator/cmd.Version=$(VERSION)"
 
 build: ## Build the project
 	@echo "--> Building project (version: $(VERSION))"
@@ -67,7 +67,7 @@ format-install:
 format: ## Run formatter (goimports)
 	@echo "--> Running goimports"
 	$(MAKE) format-install
-	@find . -name '*.go' -exec goimports -w -local github.com/liftedinit/mfx-migrator {} \;
+	@find . -name '*.go' -exec goimports -w -local github.com/manifest-network/mfx-migrator {} \;
 
 #### GOVULNCHECK ####
 govulncheck_version=latest
@@ -94,7 +94,7 @@ vet: ## Run go vet
 
 coverage: ## Run coverage report
 	@echo "--> Running coverage"
-	@go test -race -cpu=$$(nproc) -covermode=atomic -coverprofile=coverage.out $$(go list ./...) ./interchaintest/... -coverpkg=github.com/liftedinit/mfx-migrator/... > /dev/null 2>&1
+	@go test -race -cpu=$$(nproc) -covermode=atomic -coverprofile=coverage.out $$(go list ./...) ./interchaintest/... -coverpkg=github.com/manifest-network/mfx-migrator/... > /dev/null 2>&1
 	@echo "--> Running coverage filter"
 	@./scripts/filter-coverage.sh
 	@echo "--> Running coverage report"

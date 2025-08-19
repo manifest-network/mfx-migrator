@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 
-	"github.com/liftedinit/mfx-migrator/internal/store"
-	"github.com/liftedinit/mfx-migrator/internal/utils"
+	"github.com/manifest-network/mfx-migrator/internal/store"
+	"github.com/manifest-network/mfx-migrator/internal/utils"
 )
 
 const (
