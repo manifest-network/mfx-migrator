@@ -1,6 +1,6 @@
 module github.com/manifest-network/mfx-migrator
 
-go 1.24.6
+go 1.25.4
 
 require (
 	github.com/go-resty/resty/v2 v2.11.0
