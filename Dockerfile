@@ -20,7 +20,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o mfx-migrator .
 
 # Start from a Debian Slim image to keep the final image size down.
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 # Install cron to schedule the job.
 RUN apt-get update && apt-get install -y cron jq && rm -rf /var/lib/apt/lists/*
